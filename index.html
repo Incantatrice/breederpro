@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#5B3D8F" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>BreederPro — Управление питомником</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Playfair+Display:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif; background: #F8F5FF; }
+    ::-webkit-scrollbar { display: none; }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    input:focus, select:focus, textarea:focus { border-color: #8B6FC0 !important; box-shadow: 0 0 0 3px #E8DFF5; outline: none; }
+    input, select, button, textarea { font-family: inherit; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+
+/* ═══════════════════════ SUPABASE CLIENT ═══════════════════════ */
+const SUPABASE_URL = "https://zqxuyuaclvwjyrdvkjcv.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxeHV5dWFjbHZ3anlyZHZramN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2ODQ1MjgsImV4cCI6MjA4ODI2MDUyOH0.kkr9qvszlemPyCwlV7z9hDKARFeMKsejgsQDqhg7ehw";
+
+const sb = {
+  token: null,
+  headers() {
+    const h = { "apikey": SUPABASE_KEY, "Content-Type": "application/json" };
+    h["Authorization"] = "Bearer " + (this.token || SUPABASE_KEY);
+    return h;
+  },
+  async auth(action, body) {
+    const r = await fetch(SUPABASE_URL + "/auth/v1/" + action, { method: "POST", headers: this.headers(), body: JSON.stringify(body) });
+    const d = await r.json(); if (!r.ok) throw new Error(d.error_description || d.msg || d.message || "Auth error"); return d;
+  },
+  async signUp(email, password, name) {
+    const d = await this.auth("signup", { email, password, data: { full_name: name } });
+    if (d.access_token) this.token = d.access_token;
+    return d;
+  },
+  async signIn(email, password) {
+    const d = await this.auth("token?grant_type=password", { email, password });
+    if (d.access_token) this.token = d.access_token;
+    return d;
+  },
+  async getUser() {
+    const r = await fetch(SUPABASE_URL + "/auth/v1/user", { headers: this.headers() });
+    if (!r.ok) return null; return await r.json();
+  },
+  signOut() { this.token = null; },
+  async select(table, query) {
+    const r = await fetch(SUPABASE_URL + "/rest/v1/" + table + "?" + (query||""), { headers: { ...this.headers(), "Prefer": "return=representation" } });
+    if (!r.ok) { const e = await r.json(); throw new Error(e.message); } return await r.json();
+  },
+  async insert(table, data) {
+    const r = await fetch(SUPABASE_URL + "/rest/v1/" + table, { method: "POST", headers: { ...this.headers(), "Prefer": "return=representation" }, body: JSON.stringify(data) });
+    if (!r.ok) { const e = await r.json(); throw new Error(e.message); } return await r.json();
+  },
+  async update(table, id, data) {
+    const r = await fetch(SUPABASE_URL + "/rest/v1/" + table + "?id=eq." + id, { method: "PATCH", headers: { ...this.headers(), "Prefer": "return=representation" }, body: JSON.stringify(data) });
+    if (!r.ok) { const e = await r.json(); throw new Error(e.message); } return await r.json();
+  },
+};
+
+/* ═══════════════════════ PALETTE ═══════════════════════ */
+const C = {
+  bg:"#F8F5FF",surface:"#FFFFFF",
+  purple:"#8B6FC0",purpleDeep:"#5B3D8F",purpleSoft:"#E8DFF5",purplePale:"#F3EEFB",
+  gold:"#C8A24E",goldSoft:"#FFF4D9",goldPale:"#FFFAEB",
+  text:"#2D1B4E",textSec:"#7A6992",textTer:"#B5A8C8",
+  green:"#4CAF50",greenSoft:"#EDF7ED",
+  red:"#E57373",redSoft:"#FDEDED",
+  blue:"#5C7AEA",blueSoft:"#EEF1FD",
+  orange:"#F4A261",orangeSoft:"#FFF3E6",
+  border:"#EDE6F5",shadow:"rgba(91,61,143,0.07)",
+};
+
+const TABS = [
+  {id:"dogs",icon:"🐕",label:"Собаки"},
+  {id:"dash",icon:"📊",label:"Обзор"},
+  {id:"finance",icon:"💰",label:"Финансы"},
+  {id:"health",icon:"🏥",label:"Здоровье"},
+  {id:"shows",icon:"🏆",label:"Выставки"},
+  {id:"litters",icon:"🐾",label:"Помёты"},
+  {id:"groom",icon:"✂️",label:"Груминг"},
+  {id:"board",icon:"🏠",label:"Передержка"},
+];
+
+const MS = ["Я","Ф","М","А","М","И","И","А","С","О","Н","Д"];
+const fmtRub = n => new Intl.NumberFormat("ru-RU").format(n) + " ₽";
+
+/* ═══════════════════════ UI COMPONENTS ═══════════════════════ */
+const Badge = ({children,color=C.purpleDeep,bg=C.purplePale}) => (
+  <span style={{display:"inline-block",padding:"3px 11px",borderRadius:20,fontSize:11,fontWeight:700,color,background:bg,whiteSpace:"nowrap"}}>{children}</span>
+);
+const Card = ({children,onClick,accent}) => (
+  <div onClick={onClick} style={{background:C.surface,borderRadius:20,padding:"16px 18px",marginBottom:10,boxShadow:"0 2px 12px "+C.shadow,cursor:onClick?"pointer":"default",borderLeft:accent?"4px solid "+accent:"none"}}>{children}</div>
+);
+const StatCard = ({icon,val,label,bg=C.purplePale,color=C.purpleDeep}) => (
+  <div style={{flex:1,background:bg,borderRadius:18,padding:"14px 8px",textAlign:"center",minWidth:0}}>
+    <div style={{fontSize:20,marginBottom:4}}>{icon}</div>
+    <div style={{fontSize:18,fontWeight:800,color,fontFamily:"'Playfair Display', serif"}}>{val}</div>
+    <div style={{fontSize:10,color:C.textTer,fontWeight:600,marginTop:2}}>{label}</div>
+  </div>
+);
+const SectionHead = ({children,action,onAction}) => (
+  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"22px 0 12px"}}>
+    <h3 style={{fontSize:17,fontWeight:700,color:C.text,margin:0,fontFamily:"'Playfair Display', serif"}}>{children}</h3>
+    {action && <button onClick={onAction} style={{background:"linear-gradient(135deg,"+C.purpleDeep+","+C.purple+")",color:"#fff",border:"none",borderRadius:20,padding:"7px 16px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{action}</button>}
+  </div>
+);
+const ProgressBar = ({value,max,color=C.purple}) => (
+  <div style={{background:C.purplePale,borderRadius:8,height:8,overflow:"hidden",flex:1}}>
+    <div style={{width:Math.min((value/max)*100,100)+"%",height:"100%",background:"linear-gradient(90deg,"+color+","+C.gold+")",borderRadius:8,transition:"width 0.6s ease"}} />
+  </div>
+);
+const EmptyState = ({icon,text}) => (
+  <div style={{textAlign:"center",padding:"48px 20px",color:C.textTer}}><div style={{fontSize:44,marginBottom:10}}>{icon}</div><div style={{fontSize:14}}>{text}</div></div>
+);
+const MiniChart = ({data,height=65}) => {
+  const max = Math.max(...data,1);
+  return (<div style={{display:"flex",alignItems:"flex-end",gap:4,height:height}}>{data.map((v,i) => (
+    <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+      <div style={{width:"100%",maxWidth:24,height:Math.max((v/max)*(height-16),4),background:"linear-gradient(to top,"+C.purple+","+C.gold+")",borderRadius:6}} />
+      <span style={{fontSize:8,color:C.textTer,fontWeight:600}}>{MS[i]}</span>
+    </div>))}</div>);
+};
+const Modal = ({open,onClose,title,children}) => {
+  if (!open) return null;
+  return (<div style={{position:"fixed",inset:0,zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={onClose}>
+    <div style={{position:"absolute",inset:0,background:"rgba(45,27,78,0.35)",backdropFilter:"blur(8px)"}} />
+    <div onClick={e=>e.stopPropagation()} style={{position:"relative",background:C.bg,borderRadius:"28px 28px 0 0",width:"100%",maxWidth:480,maxHeight:"88vh",overflow:"auto",padding:"20px 22px 36px",animation:"slideUp 0.3s ease"}}>
+      <div style={{width:36,height:4,background:C.border,borderRadius:2,margin:"0 auto 18px"}} />
+      <h3 style={{fontSize:20,fontWeight:700,color:C.text,margin:"0 0 18px",fontFamily:"'Playfair Display', serif"}}>{title}</h3>
+      {children}
+    </div>
+  </div>);
+};
+const FormField = ({label,children}) => (<div style={{marginBottom:14}}><label style={{display:"block",fontSize:11,fontWeight:700,color:C.textSec,marginBottom:5,textTransform:"uppercase",letterSpacing:0.8}}>{label}</label>{children}</div>);
+const inputStyle = {width:"100%",padding:"12px 16px",borderRadius:14,border:"1.5px solid "+C.border,fontSize:14,color:C.text,background:C.surface,outline:"none",boxSizing:"border-box",fontFamily:"inherit"};
+const btnPrimary = {width:"100%",padding:"15px",borderRadius:16,border:"none",background:"linear-gradient(135deg,"+C.purpleDeep+","+C.purple+")",color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"};
+const ChipFilter = ({options,active,onChange}) => (<div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:4}}>{options.map(o=>(
+  <button key={o.id} onClick={()=>onChange(o.id)} style={{padding:"8px 14px",borderRadius:20,border:"none",whiteSpace:"nowrap",fontFamily:"inherit",background:active===o.id?"linear-gradient(135deg,"+C.purpleDeep+","+C.purple+")":C.surface,color:active===o.id?"#fff":C.text,fontSize:12,fontWeight:600,cursor:"pointer",boxShadow:active===o.id?"0 2px 8px rgba(91,61,143,0.3)":"0 1px 4px "+C.shadow}}>{o.label}</button>
+))}</div>);
+const Spinner = () => (<div style={{display:"flex",justifyContent:"center",padding:40}}><div style={{width:32,height:32,border:"3px solid "+C.purplePale,borderTopColor:C.purple,borderRadius:"50%",animation:"spin 0.8s linear infinite"}} /></div>);
+
+/* ═══════════════════════ AUTH SCREEN ═══════════════════════ */
+const AuthScreen = ({onAuth}) => {
+  const [mode,setMode] = useState("login");
+  const [email,setEmail] = useState("");
+  const [password,setPassword] = useState("");
+  const [name,setName] = useState("");
+  const [error,setError] = useState("");
+  const [loading,setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    setError(""); setLoading(true);
+    try {
+      if (mode==="signup") {
+        const d = await sb.signUp(email,password,name);
+        if (d.access_token) onAuth(d.user);
+        else setError("Проверьте email для подтверждения");
+      } else {
+        const d = await sb.signIn(email,password);
+        onAuth(d.user);
+      }
+    } catch(e) { setError(e.message); }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{background:C.bg,minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24,color:C.text}}>
+      <div style={{position:"fixed",top:-50,right:-40,width:200,height:200,borderRadius:"50%",background:C.purpleSoft,opacity:0.5,filter:"blur(50px)",pointerEvents:"none"}} />
+      <div style={{position:"fixed",bottom:100,left:-60,width:160,height:160,borderRadius:"50%",background:C.goldSoft,opacity:0.6,filter:"blur(40px)",pointerEvents:"none"}} />
+      <div style={{position:"relative",zIndex:1,width:"100%",maxWidth:360}}>
+        <div style={{textAlign:"center",marginBottom:40}}>
+          <div style={{fontSize:48,marginBottom:12}}>🐾</div>
+          <div style={{fontSize:32,fontWeight:800,color:C.purpleDeep,fontFamily:"'Playfair Display', serif"}}>BreederPro</div>
+          <div style={{fontSize:13,color:C.textSec,marginTop:4}}>Управление питомником</div>
+        </div>
+        <div style={{background:C.surface,borderRadius:24,padding:28,boxShadow:"0 8px 32px "+C.shadow}}>
+          <div style={{display:"flex",gap:8,marginBottom:24}}>
+            {["login","signup"].map(m=>(
+              <button key={m} onClick={()=>{setMode(m);setError("");}} style={{flex:1,padding:10,borderRadius:14,border:"none",fontFamily:"inherit",fontSize:14,fontWeight:700,cursor:"pointer",background:m===mode?"linear-gradient(135deg,"+C.purpleDeep+","+C.purple+")":C.purplePale,color:m===mode?"#fff":C.text}}>{m==="login"?"Войти":"Регистрация"}</button>
+            ))}
+          </div>
+          {mode==="signup" && <FormField label="Имя"><input style={inputStyle} value={name} onChange={e=>setName(e.target.value)} placeholder="Как вас зовут?" /></FormField>}
+          <FormField label="Email"><input type="email" style={inputStyle} value={email} onChange={e=>setEmail(e.target.value)} placeholder="email@example.com" /></FormField>
+          <FormField label="Пароль"><input type="password" style={inputStyle} value={password} onChange={e=>setPassword(e.target.value)} placeholder="Минимум 6 символов" /></FormField>
+          {error && <div style={{background:C.redSoft,borderRadius:12,padding:"10px 14px",marginBottom:14,fontSize:13,color:C.red}}>{error}</div>}
+          <button onClick={handleSubmit} disabled={loading} style={{...btnPrimary,opacity:loading?0.6:1}}>{loading?"Загрузка...":mode==="login"?"Войти":"Создать аккаунт"}</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ═══════════════════════ DASHBOARD ═══════════════════════ */
+const DashTab = ({dogs,income,expenses,health}) => {
+  const tI=income.reduce((s,i)=>s+i.amount,0), tE=expenses.reduce((s,e)=>s+e.amount,0), profit=tI-tE;
+  const upcoming=health.filter(h=>{if(!h.next_visit)return false;const d=(new Date(h.next_visit)-new Date())/(864e5);return d>0&&d<=90;});
+  const mI=Array(12).fill(0); income.forEach(i=>{mI[new Date(i.date).getMonth()]+=i.amount;});
+
+  return (<div>
+    <div style={{fontSize:14,color:C.textSec,fontWeight:600}}>Привет! 👋</div>
+    <div style={{fontSize:24,fontWeight:800,color:C.text,fontFamily:"'Playfair Display', serif",marginTop:2}}>Ваш питомник</div>
+    <div style={{background:"linear-gradient(135deg,"+C.purpleDeep+","+C.purple+")",borderRadius:24,padding:22,marginTop:16,position:"relative",overflow:"hidden"}}>
+      <div style={{position:"absolute",top:-30,right:-20,width:120,height:120,borderRadius:"50%",background:"rgba(255,255,255,0.07)"}} />
+      <div style={{position:"relative",zIndex:1}}>
+        <div style={{fontSize:12,color:"rgba(255,255,255,0.6)",fontWeight:600}}>Баланс</div>
+        <div style={{fontSize:34,fontWeight:800,color:"#fff",fontFamily:"'Playfair Display', serif",marginTop:4}}>{fmtRub(profit)}</div>
+        <div style={{display:"flex",gap:24,marginTop:14}}>
+          <div><span style={{fontSize:11,color:"rgba(255,255,255,0.5)"}}>Доход </span><span style={{fontSize:14,fontWeight:700,color:"#A5D6A7"}}>{fmtRub(tI)}</span></div>
+          <div><span style={{fontSize:11,color:"rgba(255,255,255,0.5)"}}>Расход </span><span style={{fontSize:14,fontWeight:700,color:"#EF9A9A"}}>{fmtRub(tE)}</span></div>
+        </div>
+      </div>
+    </div>
+    <div style={{display:"flex",gap:10,marginTop:18}}>
+      <StatCard icon="🐕" val={dogs.length} label="Собак" />
+      <StatCard icon="💰" val={income.length} label="Доходов" bg={C.goldPale} color={C.gold} />
+      <StatCard icon="🏥" val={health.length} label="Записей" bg={C.greenSoft} color={C.green} />
+    </div>
+    {income.length>0 && <><SectionHead>Доходы по месяцам</SectionHead><Card><MiniChart data={mI} /></Card></>}
+    {upcoming.length>0 && <><SectionHead>Напоминания 🔔</SectionHead>{upcoming.map(h=>(
+      <Card key={h.id} accent={C.gold}><div style={{display:"flex",alignItems:"center",gap:12}}>
+        <div style={{width:40,height:40,borderRadius:12,background:C.goldPale,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>⏰</div>
+        <div><div style={{fontWeight:700,fontSize:14}}>{h.type}</div><div style={{fontSize:12,color:C.textSec,marginTop:2}}>→ {h.next_visit}</div></div>
+      </div></Card>))}</>}
+    <SectionHead>Собаки 🐶</SectionHead>
+    {dogs.length===0 && <EmptyState icon="🐕" text="Добавьте собак во вкладке 🐕" />}
+    {dogs.map(d=>(
+      <Card key={d.id}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <div style={{width:42,height:42,borderRadius:"50%",background:d.sex==="F"?C.purplePale:C.goldPale,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:800,color:d.sex==="F"?C.purple:C.gold}}>{d.sex==="F"?"♀":"♂"}</div>
+          <div><div style={{fontWeight:700,fontSize:15}}>{d.name}</div><div style={{fontSize:12,color:C.textSec}}>{d.color}{d.born?" · "+d.born:""}</div></div>
+        </div>
+        <Badge color={d.breeding?C.green:C.textSec} bg={d.breeding?C.greenSoft:C.purplePale}>{d.status}</Badge>
+      </div></Card>))}
+  </div>);
+};
+
+/* ═══════════════════════ DOGS ═══════════════════════ */
+const DogsTab = ({userId,dogs,setDogs}) => {
+  const [showAdd,setShowAdd]=useState(false);
+  const [form,setForm]=useState({name:"",sex:"F",born:"",color:"",status:"Активна",breeding:false});
+  const handleAdd = async()=>{
+    try{ const [saved]=await sb.insert("dogs",{user_id:userId,name:form.name,sex:form.sex,born:form.born||null,color:form.color,status:form.status,breeding:form.breeding});
+      setDogs(p=>[...p,saved]); setShowAdd(false); setForm({name:"",sex:"F",born:"",color:"",status:"Активна",breeding:false});
+    }catch(e){alert("Ошибка: "+e.message);}
+  };
+  return (<div>
+    <SectionHead action="+ Собака" onAction={()=>setShowAdd(true)}>Мои собаки</SectionHead>
+    {dogs.length===0 && <EmptyState icon="🐕" text="Добавьте первую собаку" />}
+    {dogs.map(d=>(<Card key={d.id}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+      <div style={{display:"flex",alignItems:"center",gap:12}}>
+        <div style={{width:42,height:42,borderRadius:"50%",background:d.sex==="F"?C.purplePale:C.goldPale,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:800,color:d.sex==="F"?C.purple:C.gold}}>{d.sex==="F"?"♀":"♂"}</div>
+        <div><div style={{fontWeight:700,fontSize:15}}>{d.name}</div><div style={{fontSize:12,color:C.textSec}}>{d.color}{d.born?" · "+d.born:""}</div></div>
+      </div>
+      <Badge color={d.breeding?C.green:C.textSec} bg={d.breeding?C.greenSoft:C.purplePale}>{d.status}</Badge>
+    </div></Card>))}
+    <Modal open={showAdd} onClose={()=>setShowAdd(false)} title="Новая собака">
+      <FormField label="Кличка"><input style={inputStyle} value={form.name} onChange={e=>setForm({...form,name:e.target.value})} /></FormField>
+      <FormField label="Пол"><select style={inputStyle} value={form.sex} onChange={e=>setForm({...form,sex:e.target.value})}><option value="F">♀ Сука</option><option value="M">♂ Кобель</option></select></FormField>
+      <FormField label="Дата рождения"><input type="date" style={inputStyle} value={form.born} onChange={e=>setForm({...form,born:e.target.value})} /></FormField>
+      <FormField label="Окрас"><input style={inputStyle} value={form.color} onChange={e=>setForm({...form,color:e.target.value})} placeholder="Бленхейм, Триколор..." /></FormField>
+      <FormField label="Статус"><select style={inputStyle} value={form.status} onChange={e=>setForm({...form,status:e.target.value})}><option>Активна</option><option>Племенная</option><option>Племенной</option><option>Стерилизована</option><option>Нужен допуск</option></select></FormField>
+      <FormField label="В разведении?"><select style={inputStyle} value={form.breeding?"yes":"no"} onChange={e=>setForm({...form,breeding:e.target.value==="yes"})}><option value="no">Нет</option><option value="yes">Да</option></select></FormField>
+      <button onClick={handleAdd} style={btnPrimary}>Сохранить</button>
+    </Modal>
+  </div>);
+};
+
+/* ═══════════════════════ FINANCE ═══════════════════════ */
+const FinanceTab = ({userId,income,expenses,setIncome,setExpenses,dogs}) => {
+  const [tab,setTab]=useState("income");
+  const [showAdd,setShowAdd]=useState(false);
+  const [form,setForm]=useState({date:"",category:"",amount:"",note:""});
+  const incCats=["Вязка","Щенки","Контент","Менторство","Передержка","Другое"];
+  const expCats=["Кормление","Ветеринария","Выставки","Груминг","Помещение","Разведение","Хранение","Другое"];
+  const cats=tab==="income"?incCats:expCats;
+  const data=tab==="income"?income:expenses;
+  const total=data.reduce((s,d)=>s+d.amount,0);
+  const byCat={}; data.forEach(d=>{byCat[d.category]=(byCat[d.category]||0)+d.amount;});
+  const handleAdd=async()=>{
+    const tbl=tab==="income"?"income":"expenses";
+    try{ const [saved]=await sb.insert(tbl,{user_id:userId,date:form.date,category:form.category,amount:parseInt(form.amount)||0,note:form.note});
+      if(tab==="income") setIncome(p=>[saved,...p]); else setExpenses(p=>[saved,...p]);
+      setShowAdd(false); setForm({date:"",category:"",amount:"",note:""});
+    }catch(e){alert("Ошибка: "+e.message);}
+  };
+  return (<div>
+    <div style={{display:"flex",gap:8,marginBottom:16}}>
+      {["income","expenses"].map(t=>(<button key={t} onClick={()=>setTab(t)} style={{flex:1,padding:12,borderRadius:16,border:"none",fontFamily:"inherit",fontSize:14,fontWeight:700,cursor:"pointer",background:tab===t?"linear-gradient(135deg,"+C.purpleDeep+","+C.purple+")":C.surface,color:tab===t?"#fff":C.text}}>{t==="income"?"💰 Доходы":"📉 Расходы"}</button>))}
+    </div>
+    <div style={{background:tab==="income"?"linear-gradient(135deg,"+C.green+",#66BB6A)":"linear-gradient(135deg,"+C.red+",#EF9A9A)",borderRadius:22,padding:22,textAlign:"center",marginBottom:18}}>
+      <div style={{fontSize:12,color:"rgba(255,255,255,0.7)",fontWeight:600}}>Итого</div>
+      <div style={{fontSize:32,fontWeight:800,color:"#fff",fontFamily:"'Playfair Display', serif",marginTop:4}}>{fmtRub(total)}</div>
+    </div>
+    {Object.keys(byCat).length>0 && <><SectionHead>По категориям</SectionHead><Card>{Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([cat,amt])=>(
+      <div key={cat} style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+        <span style={{fontSize:13,fontWeight:600,minWidth:85}}>{cat}</span>
+        <ProgressBar value={amt} max={total} color={tab==="income"?C.green:C.red} />
+        <span style={{fontSize:12,fontWeight:700,color:C.textSec,minWidth:72,textAlign:"right"}}>{fmtRub(amt)}</span>
+      </div>))}</Card></>}
+    <SectionHead action="+ Добавить" onAction={()=>setShowAdd(true)}>Записи</SectionHead>
+    {data.length===0 && <EmptyState icon={tab==="income"?"💰":"📉"} text="Записей пока нет" />}
+    {data.sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(d=>(
+      <Card key={d.id} accent={tab==="income"?C.green:C.red}><div style={{display:"flex",justifyContent:"space-between"}}>
+        <div><div style={{fontWeight:700,fontSize:14}}>{d.category}</div><div style={{fontSize:12,color:C.textTer,marginTop:2}}>{d.date}</div>{d.note&&<div style={{fontSize:12,color:C.textSec,marginTop:4}}>{d.note}</div>}</div>
+        <span style={{fontWeight:800,fontSize:15,color:tab==="income"?C.green:C.red,fontFamily:"'Playfair Display', serif"}}>{fmtRub(d.amount)}</span>
+      </div></Card>))}
+    <Modal open={showAdd} onClose={()=>setShowAdd(false)} title={tab==="income"?"Новый доход":"Новый расход"}>
+      <FormField label="Дата"><input type="date" style={inputStyle} value={form.date} onChange={e=>setForm({...form,date:e.target.value})} /></FormField>
+      <FormField label="Категория"><select style={inputStyle} value={form.category} onChange={e=>setForm({...form,category:e.target.value})}><option value="">Выберите...</option>{cats.map(c=><option key={c}>{c}</option>)}</select></FormField>
+      <FormField label="Сумма (₽)"><input type="number" style={inputStyle} value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} /></FormField>
+      <FormField label="Примечание"><input style={inputStyle} value={form.note} onChange={e=>setForm({...form,note:e.target.value})} /></FormField>
+      <button onClick={handleAdd} style={btnPrimary}>Сохранить</button>
+    </Modal>
+  </div>);
+};
+
+/* ═══════════════════════ HEALTH ═══════════════════════ */
+const HealthTab = ({userId,dogs,health,setHealth}) => {
+  const [showAdd,setShowAdd]=useState(false);
+  const [filter,setFilter]=useState("all");
+  const [form,setForm]=useState({date:"",dog_id:"",type:"",result:"",next_visit:""});
+  const types=["Кардиолог","Стоматолог","Вакцинация","МРТ","Офтальмолог","Анализы","Другое"];
+  const filtered=filter==="all"?health:health.filter(h=>h.dog_id===parseInt(filter));
+  const icons={"Кардиолог":"❤️","Стоматолог":"🦷","Вакцинация":"💉","МРТ":"🧠","Офтальмолог":"👁","Анализы":"🧪"};
+  const dogName=id=>dogs.find(d=>d.id===id)?.name||"—";
+  const handleAdd=async()=>{
+    try{ const [saved]=await sb.insert("health_records",{user_id:userId,dog_id:parseInt(form.dog_id),date:form.date,type:form.type,result:form.result,next_visit:form.next_visit||null});
+      setHealth(p=>[saved,...p]); setShowAdd(false); setForm({date:"",dog_id:"",type:"",result:"",next_visit:""});
+    }catch(e){alert("Ошибка: "+e.message);}
+  };
+  const fOpts=[{id:"all",label:"Все"},...dogs.map(d=>({id:String(d.id),label:(d.sex==="F"?"♀":"♂")+" "+d.name}))];
+  return (<div>
+    <ChipFilter options={fOpts} active={filter} onChange={setFilter} />
+    <SectionHead action="+ Запись" onAction={()=>setShowAdd(true)}>Вет. журнал</SectionHead>
+    {filtered.length===0 && <EmptyState icon="🏥" text="Записей пока нет" />}
+    {filtered.sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(h=>(
+      <Card key={h.id} accent={C.purple}><div style={{display:"flex",gap:12}}>
+        <div style={{width:42,height:42,borderRadius:14,background:C.purplePale,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>{icons[h.type]||"📋"}</div>
+        <div style={{flex:1}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontWeight:700,fontSize:15}}>{dogName(h.dog_id)}</span><Badge>{h.type}</Badge></div>
+          {h.result&&<div style={{fontSize:13,color:C.textSec,marginTop:4}}>{h.result}</div>}
+          <div style={{display:"flex",justifyContent:"space-between",marginTop:6}}><span style={{fontSize:11,color:C.textTer}}>📅 {h.date}</span>{h.next_visit&&<span style={{fontSize:11,color:C.orange,fontWeight:600}}>→ {h.next_visit}</span>}</div>
+        </div>
+      </div></Card>))}
+    <Modal open={showAdd} onClose={()=>setShowAdd(false)} title="Новая запись">
+      <FormField label="Дата"><input type="date" style={inputStyle} value={form.date} onChange={e=>setForm({...form,date:e.target.value})} /></FormField>
+      <FormField label="Собака"><select style={inputStyle} value={form.dog_id} onChange={e=>setForm({...form,dog_id:e.target.value})}><option value="">Выберите...</option>{dogs.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</select></FormField>
+      <FormField label="Тип"><select style={inputStyle} value={form.type} onChange={e=>setForm({...form,type:e.target.value})}><option value="">Выберите...</option>{types.map(t=><option key={t}>{t}</option>)}</select></FormField>
+      <FormField label="Результат"><input style={inputStyle} value={form.result} onChange={e=>setForm({...form,result:e.target.value})} /></FormField>
+      <FormField label="Следующий визит"><input type="date" style={inputStyle} value={form.next_visit} onChange={e=>setForm({...form,next_visit:e.target.value})} /></FormField>
+      <button onClick={handleAdd} style={btnPrimary}>Сохранить</button>
+    </Modal>
+  </div>);
+};
+
+/* ═══════════════════════ SHOWS ═══════════════════════ */
+const ShowsTab = ({userId,dogs,shows,setShows}) => {
+  const [showAdd,setShowAdd]=useState(false);
+  const [form,setForm]=useState({date:"",dog_id:"",show_name:"",place:"",result:"",handler:"",cost:"",title_earned:""});
+  const totalCost=shows.reduce((s,sh)=>s+sh.cost,0); const titles=shows.filter(s=>s.title_earned).length;
+  const dogName=id=>dogs.find(d=>d.id===id)?.name||"—";
+  const handleAdd=async()=>{
+    try{ const [saved]=await sb.insert("shows",{user_id:userId,dog_id:parseInt(form.dog_id),date:form.date,show_name:form.show_name,place:form.place,result:form.result,handler:form.handler,cost:parseInt(form.cost)||0,title_earned:form.title_earned||null});
+      setShows(p=>[saved,...p]); setShowAdd(false); setForm({date:"",dog_id:"",show_name:"",place:"",result:"",handler:"",cost:"",title_earned:""});
+    }catch(e){alert("Ошибка: "+e.message);}
+  };
+  return (<div>
+    <div style={{display:"flex",gap:10,marginBottom:16}}>
+      <StatCard icon="🏆" val={shows.length} label="Выставки" />
+      <StatCard icon="🎖" val={titles} label="Титулы" bg={C.goldPale} color={C.gold} />
+      <StatCard icon="💸" val={fmtRub(totalCost)} label="Расходы" bg={C.redSoft} color={C.red} />
+    </div>
+    <SectionHead action="+ Выставка" onAction={()=>setShowAdd(true)}>История</SectionHead>
+    {shows.length===0 && <EmptyState icon="🏆" text="Выставок пока нет" />}
+    {shows.sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(s=>(
+      <Card key={s.id} accent={s.title_earned?C.gold:undefined}><div style={{display:"flex",justifyContent:"space-between"}}>
+        <div style={{flex:1}}><div style={{fontWeight:700,fontSize:15}}>{s.show_name}</div><div style={{fontSize:12,color:C.textSec,marginTop:2}}>{dogName(s.dog_id)} · {s.place} · {s.date}</div>{s.result&&<div style={{fontSize:13,marginTop:4}}>{s.result}</div>}{s.handler&&<div style={{fontSize:11,color:C.textTer,marginTop:2}}>Хэндлер: {s.handler}</div>}</div>
+        <div style={{textAlign:"right",minWidth:70}}>{s.title_earned&&<Badge color={C.gold} bg={C.goldPale}>{s.title_earned}</Badge>}<div style={{fontSize:12,color:C.red,fontWeight:700,marginTop:4}}>{fmtRub(s.cost)}</div></div>
+      </div></Card>))}
+    <Modal open={showAdd} onClose={()=>setShowAdd(false)} title="Новая выставка">
+      <FormField label="Дата"><input type="date" style={inputStyle} value={form.date} onChange={e=>setForm({...form,date:e.target.value})} /></FormField>
+      <FormField label="Собака"><select style={inputStyle} value={form.dog_id} onChange={e=>setForm({...form,dog_id:e.target.value})}><option value="">Выберите...</option>{dogs.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</select></FormField>
+      <FormField label="Название"><input style={inputStyle} value={form.show_name} onChange={e=>setForm({...form,show_name:e.target.value})} /></FormField>
+      <FormField label="Место"><input style={inputStyle} value={form.place} onChange={e=>setForm({...form,place:e.target.value})} /></FormField>
+      <FormField label="Результат"><input style={inputStyle} value={form.result} onChange={e=>setForm({...form,result:e.target.value})} /></FormField>
+      <FormField label="Хэндлер"><input style={inputStyle} value={form.handler} onChange={e=>setForm({...form,handler:e.target.value})} /></FormField>
+      <FormField label="Титул"><input style={inputStyle} value={form.title_earned} onChange={e=>setForm({...form,title_earned:e.target.value})} placeholder="JCAC, CACIB..." /></FormField>
+      <FormField label="Расходы (₽)"><input type="number" style={inputStyle} value={form.cost} onChange={e=>setForm({...form,cost:e.target.value})} /></FormField>
+      <button onClick={handleAdd} style={btnPrimary}>Сохранить</button>
+    </Modal>
+  </div>);
+};
+
+/* ═══════════════════════ LITTERS ═══════════════════════ */
+const LittersTab = ({userId,litters,setLitters}) => {
+  const [showAdd,setShowAdd]=useState(false);
+  const [form,setForm]=useState({father_name:"",mating_date:"",birth_date:"",puppies_count:""});
+  const handleAdd=async()=>{
+    try{ const [saved]=await sb.insert("litters",{user_id:userId,father_name:form.father_name,mating_date:form.mating_date||null,birth_date:form.birth_date||null,puppies_count:parseInt(form.puppies_count)||0});
+      setLitters(p=>[...p,saved]); setShowAdd(false); setForm({father_name:"",mating_date:"",birth_date:"",puppies_count:""});
+    }catch(e){alert("Ошибка: "+e.message);}
+  };
+  return (<div>
+    <SectionHead action="+ Помёт" onAction={()=>setShowAdd(true)}>Помёты</SectionHead>
+    {litters.length===0 && <EmptyState icon="🐾" text="Помётов пока нет" />}
+    {litters.map(l=>(<Card key={l.id}>
+      <div style={{fontWeight:700,fontSize:16,fontFamily:"'Playfair Display', serif",marginBottom:8}}>♂ {l.father_name||"—"}</div>
+      <div style={{fontSize:12,color:C.textTer}}>{l.mating_date?"Вязка: "+l.mating_date:""}{l.birth_date?" · Рождение: "+l.birth_date:""}</div>
+      <div style={{display:"flex",gap:8,marginTop:10}}>
+        <div style={{flex:1,background:C.purplePale,borderRadius:14,padding:"10px 8px",textAlign:"center"}}><div style={{fontSize:20,fontWeight:800,color:C.purpleDeep}}>{l.puppies_count||0}</div><div style={{fontSize:10,color:C.textTer}}>щенков</div></div>
+        <div style={{flex:1,background:C.greenSoft,borderRadius:14,padding:"10px 8px",textAlign:"center"}}><div style={{fontSize:20,fontWeight:800,color:C.green}}>{l.sold||0}</div><div style={{fontSize:10,color:C.textTer}}>продано</div></div>
+      </div>
+    </Card>))}
+    <Modal open={showAdd} onClose={()=>setShowAdd(false)} title="Новый помёт">
+      <FormField label="Отец"><input style={inputStyle} value={form.father_name} onChange={e=>setForm({...form,father_name:e.target.value})} /></FormField>
+      <FormField label="Дата вязки"><input type="date" style={inputStyle} value={form.mating_date} onChange={e=>setForm({...form,mating_date:e.target.value})} /></FormField>
+      <FormField label="Дата рождения"><input type="date" style={inputStyle} value={form.birth_date} onChange={e=>setForm({...form,birth_date:e.target.value})} /></FormField>
+      <FormField label="Щенков"><input type="number" style={inputStyle} value={form.puppies_count} onChange={e=>setForm({...form,puppies_count:e.target.value})} /></FormField>
+      <button onClick={handleAdd} style={btnPrimary}>Сохранить</button>
+    </Modal>
+  </div>);
+};
+
+/* ═══════════════════════ GROOMING ═══════════════════════ */
+const GroomTab = ({userId,dogs,groom,setGroom}) => {
+  const [showAdd,setShowAdd]=useState(false);
+  const [form,setForm]=useState({date:"",dog_id:"",procedure_name:"",notes:""});
+  const procs=["Купание + сушка","Стрижка лап + когти","Полный груминг","Чистка ушей","Расчёсывание","Другое"];
+  const pI={"Купание + сушка":"🛁","Стрижка лап + когти":"✂️","Полный груминг":"💇","Чистка ушей":"👂","Расчёсывание":"🪮"};
+  const dogName=id=>dogs.find(d=>d.id===id)?.name||"—";
+  const handleAdd=async()=>{
+    try{ const [saved]=await sb.insert("grooming",{user_id:userId,dog_id:parseInt(form.dog_id),date:form.date,procedure_name:form.procedure_name,notes:form.notes||null});
+      setGroom(p=>[saved,...p]); setShowAdd(false); setForm({date:"",dog_id:"",procedure_name:"",notes:""});
+    }catch(e){alert("Ошибка: "+e.message);}
+  };
+  return (<div>
+    <SectionHead action="+ Процедура" onAction={()=>setShowAdd(true)}>Журнал груминга</SectionHead>
+    {groom.length===0 && <EmptyState icon="✂️" text="Записей пока нет" />}
+    {groom.sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(g=>(
+      <Card key={g.id}><div style={{display:"flex",gap:12,alignItems:"center"}}>
+        <div style={{width:42,height:42,borderRadius:14,background:C.purplePale,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>{pI[g.procedure_name]||"✨"}</div>
+        <div style={{flex:1}}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontWeight:700,fontSize:14}}>{dogName(g.dog_id)}</span><span style={{fontSize:11,color:C.textTer}}>{g.date}</span></div>
+          <div style={{fontSize:13,color:C.textSec,marginTop:2}}>{g.procedure_name}</div>{g.notes&&<div style={{fontSize:12,color:C.textTer,marginTop:2}}>{g.notes}</div>}</div>
+      </div></Card>))}
+    <Modal open={showAdd} onClose={()=>setShowAdd(false)} title="Новая процедура">
+      <FormField label="Дата"><input type="date" style={inputStyle} value={form.date} onChange={e=>setForm({...form,date:e.target.value})} /></FormField>
+      <FormField label="Собака"><select style={inputStyle} value={form.dog_id} onChange={e=>setForm({...form,dog_id:e.target.value})}><option value="">Выберите...</option>{dogs.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</select></FormField>
+      <FormField label="Процедура"><select style={inputStyle} value={form.procedure_name} onChange={e=>setForm({...form,procedure_name:e.target.value})}><option value="">Выберите...</option>{procs.map(p=><option key={p}>{p}</option>)}</select></FormField>
+      <FormField label="Заметки"><input style={inputStyle} value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} /></FormField>
+      <button onClick={handleAdd} style={btnPrimary}>Сохранить</button>
+    </Modal>
+  </div>);
+};
+
+/* ═══════════════════════ BOARDING ═══════════════════════ */
+const BoardingTab = ({userId,boarding,setBoarding}) => {
+  const [showAdd,setShowAdd]=useState(false);
+  const [detail,setDetail]=useState(null);
+  const [filter,setFilter]=useState("all");
+  const [form,setForm]=useState({dog_name:"",breed:"",owner_name:"",owner_phone:"",owner_telegram:"",date_in:"",date_out:"",daily_rate:"",prepaid:"0",notes:""});
+  const filtered=filter==="all"?boarding:boarding.filter(b=>b.status===filter);
+  const getDays=(a,b)=>Math.max(Math.ceil((new Date(b)-new Date(a))/864e5),0);
+  const stMap={active:{label:"Сейчас",color:C.green,bg:C.greenSoft},upcoming:{label:"Ожидает",color:C.blue,bg:C.blueSoft},completed:{label:"Завершено",color:C.textSec,bg:C.purplePale}};
+  const aN=boarding.filter(b=>b.status==="active").length;
+  const totalRev=boarding.reduce((s,b)=>s+getDays(b.date_in,b.date_out)*b.daily_rate,0);
+  const handleAdd=async()=>{
+    try{ const [saved]=await sb.insert("boarding",{user_id:userId,dog_name:form.dog_name,breed:form.breed,owner_name:form.owner_name,owner_phone:form.owner_phone,owner_telegram:form.owner_telegram,date_in:form.date_in,date_out:form.date_out,daily_rate:parseInt(form.daily_rate)||0,prepaid:parseInt(form.prepaid)||0,notes:form.notes,status:"upcoming"});
+      setBoarding(p=>[saved,...p]); setShowAdd(false); setForm({dog_name:"",breed:"",owner_name:"",owner_phone:"",owner_telegram:"",date_in:"",date_out:"",daily_rate:"",prepaid:"0",notes:""});
+    }catch(e){alert("Ошибка: "+e.message);}
+  };
+  const updSt=async(id,st)=>{try{await sb.update("boarding",id,{status:st});setBoarding(p=>p.map(b=>b.id===id?{...b,status:st}:b));setDetail(null);}catch(e){alert(e.message);}};
+
+  return (<div>
+    <div style={{display:"flex",gap:10,marginBottom:16}}>
+      <StatCard icon="🟢" val={aN} label="Сейчас" bg={C.greenSoft} color={C.green} />
+      <StatCard icon="💰" val={fmtRub(totalRev)} label="Выручка" bg={C.goldPale} color={C.gold} />
+    </div>
+    <ChipFilter options={[{id:"all",label:"Все"},{id:"active",label:"🟢 Сейчас"},{id:"upcoming",label:"🔵 Ожидают"},{id:"completed",label:"⚪ Завершено"}]} active={filter} onChange={setFilter} />
+    <SectionHead action="+ Запись" onAction={()=>setShowAdd(true)}>Передержки</SectionHead>
+    {filtered.length===0 && <EmptyState icon="🏠" text="Нет записей" />}
+    {filtered.sort((a,b)=>{const o={active:0,upcoming:1,completed:2};return(o[a.status]||9)-(o[b.status]||9);}).map(b=>{
+      const st=stMap[b.status]||stMap.upcoming,days=getDays(b.date_in,b.date_out),total=days*b.daily_rate,left=Math.ceil((new Date(b.date_out)-new Date())/864e5);
+      return(<Card key={b.id} onClick={()=>setDetail(b)} accent={st.color}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{fontWeight:700,fontSize:15}}>🐕 {b.dog_name}</span><Badge color={st.color} bg={st.bg}>{st.label}</Badge></div>
+        <div style={{fontSize:12,color:C.textTer,marginBottom:8}}>{b.breed} · {b.owner_name}</div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span style={{fontSize:12,color:C.textSec}}>{days} дн. · {fmtRub(b.daily_rate)}/день</span>
+          <span style={{fontWeight:800,fontSize:15,color:C.green,fontFamily:"'Playfair Display', serif"}}>{fmtRub(total)}</span>
+        </div>
+        {b.notes&&<div style={{marginTop:10,padding:"8px 12px",background:C.orangeSoft,borderRadius:10,fontSize:12,color:C.orange}}>⚠️ {b.notes.length>80?b.notes.slice(0,80)+"...":b.notes}</div>}
+      </Card>);})}
+
+    <Modal open={!!detail} onClose={()=>setDetail(null)} title={detail?"🐕 "+detail.dog_name:""}>
+      {detail&&(()=>{const b=detail,days=getDays(b.date_in,b.date_out),total=days*b.daily_rate,debt=total-b.prepaid,st=stMap[b.status];return(<div>
+        <div style={{background:C.purplePale,borderRadius:16,padding:16,marginBottom:14}}>
+          <div style={{fontSize:13,fontWeight:700,marginBottom:8}}>👤 Владелец</div>
+          <div style={{fontSize:14,marginBottom:4}}>{b.owner_name}</div>
+          {b.owner_phone&&<a href={"tel:"+b.owner_phone} style={{fontSize:13,color:C.blue,textDecoration:"none",display:"block"}}>📞 {b.owner_phone}</a>}
+          {b.owner_telegram&&<div style={{fontSize:13,color:C.blue,marginTop:4}}>✈️ {b.owner_telegram}</div>}
+        </div>
+        <div style={{background:C.greenSoft,borderRadius:16,padding:16,marginBottom:14}}>
+          <div style={{fontSize:13,fontWeight:700,marginBottom:8}}>💰 Оплата: {fmtRub(total)}</div>
+          {b.prepaid>0&&<div style={{fontSize:13}}>Предоплата: {fmtRub(b.prepaid)}</div>}
+          {debt>0&&<div style={{fontSize:13,color:C.red,fontWeight:700,marginTop:4}}>Долг: {fmtRub(debt)}</div>}
+        </div>
+        {b.notes&&<div style={{background:C.orangeSoft,borderRadius:16,padding:16,marginBottom:14}}><div style={{fontSize:13,fontWeight:700,marginBottom:6}}>📝 Особенности</div><div style={{fontSize:13}}>{b.notes}</div></div>}
+        <div style={{display:"flex",gap:8,marginTop:16}}>
+          {b.status==="upcoming"&&<button onClick={()=>updSt(b.id,"active")} style={{...btnPrimary,background:"linear-gradient(135deg,"+C.green+",#66BB6A)"}}>Принять</button>}
+          {b.status==="active"&&<button onClick={()=>updSt(b.id,"completed")} style={btnPrimary}>Завершить</button>}
+        </div>
+      </div>);})()}
+    </Modal>
+
+    <Modal open={showAdd} onClose={()=>setShowAdd(false)} title="Новая передержка">
+      <FormField label="Кличка"><input style={inputStyle} value={form.dog_name} onChange={e=>setForm({...form,dog_name:e.target.value})} /></FormField>
+      <FormField label="Порода"><input style={inputStyle} value={form.breed} onChange={e=>setForm({...form,breed:e.target.value})} /></FormField>
+      <div style={{background:C.purplePale,borderRadius:16,padding:16,marginBottom:14}}>
+        <div style={{fontSize:11,fontWeight:700,color:C.textSec,marginBottom:10,textTransform:"uppercase"}}>👤 Владелец</div>
+        <FormField label="ФИО"><input style={inputStyle} value={form.owner_name} onChange={e=>setForm({...form,owner_name:e.target.value})} /></FormField>
+        <FormField label="Телефон"><input type="tel" style={inputStyle} value={form.owner_phone} onChange={e=>setForm({...form,owner_phone:e.target.value})} /></FormField>
+        <FormField label="Telegram"><input style={inputStyle} value={form.owner_telegram} onChange={e=>setForm({...form,owner_telegram:e.target.value})} /></FormField>
+      </div>
+      <FormField label="Заезд"><input type="date" style={inputStyle} value={form.date_in} onChange={e=>setForm({...form,date_in:e.target.value})} /></FormField>
+      <FormField label="Выезд"><input type="date" style={inputStyle} value={form.date_out} onChange={e=>setForm({...form,date_out:e.target.value})} /></FormField>
+      <FormField label="₽/день"><input type="number" style={inputStyle} value={form.daily_rate} onChange={e=>setForm({...form,daily_rate:e.target.value})} /></FormField>
+      <FormField label="Предоплата"><input type="number" style={inputStyle} value={form.prepaid} onChange={e=>setForm({...form,prepaid:e.target.value})} /></FormField>
+      <FormField label="Особенности"><textarea style={{...inputStyle,minHeight:80,resize:"vertical"}} value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} /></FormField>
+      <button onClick={handleAdd} style={btnPrimary}>Сохранить</button>
+    </Modal>
+  </div>);
+};
+
+/* ═══════════════════════ MAIN APP ═══════════════════════ */
+function App() {
+  const [user,setUser]=useState(null);
+  const [loading,setLoading]=useState(true);
+  const [activeTab,setActiveTab]=useState("dash");
+  const [dogs,setDogs]=useState([]);
+  const [income,setIncome]=useState([]);
+  const [expenses,setExpenses]=useState([]);
+  const [health,setHealth]=useState([]);
+  const [shows,setShows]=useState([]);
+  const [litters,setLitters]=useState([]);
+  const [groom,setGroom]=useState([]);
+  const [boarding,setBoarding]=useState([]);
+
+  useEffect(()=>{
+    try{const t=sessionStorage.getItem("bp_token");
+    if(t){sb.token=t;sb.getUser().then(u=>{if(u?.id)setUser(u);else sb.token=null;setLoading(false);}).catch(()=>setLoading(false));}
+    else setLoading(false);}catch(e){setLoading(false);}
+  },[]);
+
+  useEffect(()=>{
+    if(!user)return;
+    Promise.all([
+      sb.select("dogs","order=name.asc"),sb.select("income","order=date.desc"),sb.select("expenses","order=date.desc"),
+      sb.select("health_records","order=date.desc"),sb.select("shows","order=date.desc"),sb.select("litters","order=created_at.desc"),
+      sb.select("grooming","order=date.desc"),sb.select("boarding","order=date_in.desc"),
+    ]).then(([d,i,e,h,s,l,g,b])=>{setDogs(d);setIncome(i);setExpenses(e);setHealth(h);setShows(s);setLitters(l);setGroom(g);setBoarding(b);}).catch(console.error);
+  },[user]);
+
+  const handleAuth=(u)=>{setUser(u);try{sessionStorage.setItem("bp_token",sb.token);}catch(e){}};
+  const handleLogout=()=>{sb.signOut();try{sessionStorage.removeItem("bp_token");}catch(e){}setUser(null);};
+
+  if(loading) return <div style={{background:C.bg,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center"}}><Spinner/></div>;
+  if(!user) return <AuthScreen onAuth={handleAuth}/>;
+
+  const uid=user.id;
+  const renderTab=()=>{
+    switch(activeTab){
+      case "dogs": return <DogsTab userId={uid} dogs={dogs} setDogs={setDogs}/>;
+      case "dash": return <DashTab dogs={dogs} income={income} expenses={expenses} health={health}/>;
+      case "finance": return <FinanceTab userId={uid} income={income} expenses={expenses} setIncome={setIncome} setExpenses={setExpenses} dogs={dogs}/>;
+      case "health": return <HealthTab userId={uid} dogs={dogs} health={health} setHealth={setHealth}/>;
+      case "shows": return <ShowsTab userId={uid} dogs={dogs} shows={shows} setShows={setShows}/>;
+      case "litters": return <LittersTab userId={uid} litters={litters} setLitters={setLitters}/>;
+      case "groom": return <GroomTab userId={uid} dogs={dogs} groom={groom} setGroom={setGroom}/>;
+      case "board": return <BoardingTab userId={uid} boarding={boarding} setBoarding={setBoarding}/>;
+    }
+  };
+
+  return (
+    <div style={{background:C.bg,minHeight:"100vh",maxWidth:480,margin:"0 auto",position:"relative",color:C.text}}>
+      <div style={{position:"fixed",top:-50,right:-40,width:200,height:200,borderRadius:"50%",background:C.purpleSoft,opacity:0.5,filter:"blur(50px)",pointerEvents:"none",zIndex:0}} />
+      <div style={{position:"fixed",top:120,left:-60,width:160,height:160,borderRadius:"50%",background:C.goldSoft,opacity:0.6,filter:"blur(40px)",pointerEvents:"none",zIndex:0}} />
+      <div style={{padding:"24px 22px 16px",position:"relative",zIndex:1}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div><div style={{fontSize:22,fontWeight:800,color:C.purpleDeep,fontFamily:"'Playfair Display', serif"}}>BreederPro</div><div style={{fontSize:11,color:C.textTer,fontWeight:600}}>{user.email}</div></div>
+          <button onClick={handleLogout} style={{width:46,height:46,borderRadius:"50%",background:"linear-gradient(140deg,"+C.purpleSoft+","+C.goldSoft+")",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,border:"2px solid "+C.surface,cursor:"pointer"}} title="Выйти">🚪</button>
+        </div>
+      </div>
+      <div style={{padding:"0 18px 110px",position:"relative",zIndex:1}}>{renderTab()}</div>
+      <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,background:C.surface+"F5",backdropFilter:"blur(20px)",borderTop:"1px solid "+C.border,display:"flex",justifyContent:"space-around",padding:"6px 2px",paddingBottom:"max(6px, env(safe-area-inset-bottom))",zIndex:100}}>
+        {TABS.map(t=>(
+          <button key={t.id} onClick={()=>setActiveTab(t.id)} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"4px 4px",border:"none",background:activeTab===t.id?C.purplePale:"none",cursor:"pointer",minWidth:40,borderRadius:12,fontFamily:"inherit"}}>
+            <span style={{fontSize:16,opacity:activeTab===t.id?1:0.4}}>{t.icon}</span>
+            <span style={{fontSize:7,color:activeTab===t.id?C.purpleDeep:C.textTer,fontWeight:activeTab===t.id?800:500}}>{t.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+</script>
+</body>
+</html>
