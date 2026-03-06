@@ -1,21 +1,22 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#5B3D8F" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>Furura — Всё о вашем питомце</title>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"/>
+  <meta name="theme-color" content="#7B5EA7"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <title>Furora — Всё о вашем питомце</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-    body{font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,sans-serif;background:#F6F4FB;color:#1E1433}
+    body{font-family:'Plus Jakarta Sans',-apple-system,sans-serif;background:#F3F0FA;color:#1E1433;overflow-x:hidden}
     ::-webkit-scrollbar{display:none}
     @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
-    @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
     @keyframes spin{to{transform:rotate(360deg)}}
-    input:focus,select:focus,textarea:focus{border-color:#8B6FC0!important;box-shadow:0 0 0 3px rgba(139,111,192,0.15);outline:none}
+    @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+    input:focus,select:focus,textarea:focus{border-color:#7B5EA7!important;box-shadow:0 0 0 3px rgba(123,94,167,0.12);outline:none}
     input,select,button,textarea{font-family:inherit}
   </style>
 </head>
@@ -25,498 +26,332 @@
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script type="text/babel">
-const {useState,useEffect,useCallback} = React;
+const{useState,useEffect}=React;
 
-/* ═══════════ SUPABASE ═══════════ */
-const SB_URL="https://zqxuyuaclvwjyrdvkjcv.supabase.co";
-const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxeHV5dWFjbHZ3anlyZHZramN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2ODQ1MjgsImV4cCI6MjA4ODI2MDUyOH0.kkr9qvszlemPyCwlV7z9hDKARFeMKsejgsQDqhg7ehw";
-const sb={
-  token:null,
-  h(){const h={"apikey":SB_KEY,"Content-Type":"application/json"};h["Authorization"]="Bearer "+(this.token||SB_KEY);return h;},
-  async auth(a,b){const r=await fetch(SB_URL+"/auth/v1/"+a,{method:"POST",headers:this.h(),body:JSON.stringify(b)});const d=await r.json();if(!r.ok)throw new Error(d.error_description||d.msg||d.message||"Ошибка");return d;},
-  async signUp(e,p,n){const d=await this.auth("signup",{email:e,password:p,data:{full_name:n}});if(d.access_token)this.token=d.access_token;return d;},
-  async signIn(e,p){const d=await this.auth("token?grant_type=password",{email:e,password:p});if(d.access_token)this.token=d.access_token;return d;},
-  async getUser(){const r=await fetch(SB_URL+"/auth/v1/user",{headers:this.h()});if(!r.ok)return null;return await r.json();},
-  signOut(){this.token=null;},
-  async sel(t,q=""){const r=await fetch(SB_URL+"/rest/v1/"+t+"?"+q,{headers:{...this.h(),"Prefer":"return=representation"}});if(!r.ok){const e=await r.json();throw new Error(e.message);}return await r.json();},
-  async ins(t,d){const r=await fetch(SB_URL+"/rest/v1/"+t,{method:"POST",headers:{...this.h(),"Prefer":"return=representation"},body:JSON.stringify(d)});if(!r.ok){const e=await r.json();throw new Error(e.message);}return await r.json();},
-  async upd(t,id,d){const r=await fetch(SB_URL+"/rest/v1/"+t+"?id=eq."+id,{method:"PATCH",headers:{...this.h(),"Prefer":"return=representation"},body:JSON.stringify(d)});if(!r.ok){const e=await r.json();throw new Error(e.message);}return await r.json();},
+/* ═══ SUPABASE ═══ */
+const SB="https://zqxuyuaclvwjyrdvkjcv.supabase.co",SK="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxeHV5dWFjbHZ3anlyZHZramN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2ODQ1MjgsImV4cCI6MjA4ODI2MDUyOH0.kkr9qvszlemPyCwlV7z9hDKARFeMKsejgsQDqhg7ehw";
+const db={
+  tk:null,
+  hd(){return{"apikey":SK,"Content-Type":"application/json","Authorization":"Bearer "+(this.tk||SK)}},
+  async au(a,b){const r=await fetch(SB+"/auth/v1/"+a,{method:"POST",headers:this.hd(),body:JSON.stringify(b)});const d=await r.json();if(!r.ok)throw new Error(d.error_description||d.msg||d.message||"Ошибка");return d;},
+  async up(e,p,n){const d=await this.au("signup",{email:e,password:p,data:{full_name:n}});if(d.access_token)this.tk=d.access_token;return d;},
+  async in_(e,p){const d=await this.au("token?grant_type=password",{email:e,password:p});if(d.access_token)this.tk=d.access_token;return d;},
+  async me(){const r=await fetch(SB+"/auth/v1/user",{headers:this.hd()});if(!r.ok)return null;return r.json();},
+  out(){this.tk=null},
+  async sel(t,q=""){const r=await fetch(SB+"/rest/v1/"+t+"?"+q,{headers:{...this.hd(),"Prefer":"return=representation"}});if(!r.ok)throw new Error((await r.json()).message);return r.json();},
+  async ins(t,d){const r=await fetch(SB+"/rest/v1/"+t,{method:"POST",headers:{...this.hd(),"Prefer":"return=representation"},body:JSON.stringify(d)});if(!r.ok)throw new Error((await r.json()).message);return r.json();},
+  async upd(t,id,d){const r=await fetch(SB+"/rest/v1/"+t+"?id=eq."+id,{method:"PATCH",headers:{...this.hd(),"Prefer":"return=representation"},body:JSON.stringify(d)});if(!r.ok)throw new Error((await r.json()).message);return r.json();},
 };
 
-/* ═══════════ PALETTE ═══════════ */
-const C={
-  bg:"#F6F4FB",bg2:"#EFEDF6",surface:"#FFFFFF",
-  purple:"#7C5CBF",purpleDeep:"#5438A0",purpleSoft:"#E4DDFB",purplePale:"#F0EDFA",
+/* ═══ COLORS ═══ */
+const P={
+  bg:"#F3F0FA",bg2:"#EBE7F5",surface:"#FFFFFF",
+  grad1:"#B18AE0",grad2:"#7B5EA7",grad3:"#5D3F8E",
+  purple:"#7B5EA7",purpleDeep:"#5D3F8E",purpleSoft:"#E4DDFB",purplePale:"#F0EDFA",
   gold:"#C9A84C",goldSoft:"#FBF3DC",goldPale:"#FDF8EC",
-  text:"#1E1433",textSec:"#6B5F80",textTer:"#A99DC0",
-  green:"#34B85C",greenSoft:"#E9F8EE",
-  red:"#E85D5D",redSoft:"#FDE9E9",
-  blue:"#4D7CF6",blueSoft:"#E8EFFD",
-  orange:"#F0923E",orangeSoft:"#FEF0E0",
-  border:"#E5E1F0",
-  shadow:"0 2px 12px rgba(30,20,51,0.06)",
-  shadowLg:"0 8px 32px rgba(30,20,51,0.10)",
+  text:"#1E1433",ts:"#6B5F80",tt:"#A99DC0",
+  green:"#34B85C",greenS:"#E2F7EA",red:"#E85D5D",redS:"#FDE9E9",
+  blue:"#4D7CF6",blueS:"#E8EFFD",orange:"#F0923E",orangeS:"#FEF0E0",
+  border:"#E5E1F0",sh:"0 2px 12px rgba(30,20,51,0.06)",shL:"0 8px 32px rgba(30,20,51,0.10)",
 };
+const fmt=n=>new Intl.NumberFormat("ru-RU").format(n)+" ₽";
 
-const fmtRub=n=>new Intl.NumberFormat("ru-RU").format(n)+" ₽";
-const MS=["Я","Ф","М","А","М","И","И","А","С","О","Н","Д"];
+/* ═══ UI KIT ═══ */
+const Badge=({children,c=P.purpleDeep,bg=P.purplePale})=>(<span style={{display:"inline-block",padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:700,color:c,background:bg,whiteSpace:"nowrap"}}>{children}</span>);
+const Card=({children,onClick,accent,s})=>(<div onClick={onClick} style={{background:P.surface,borderRadius:18,padding:"14px 16px",marginBottom:10,boxShadow:P.sh,cursor:onClick?"pointer":"default",borderLeft:accent?"3px solid "+accent:"none",animation:"fadeIn 0.3s ease",...s}}>{children}</div>);
+const Heading=({children,action,onAction})=>(<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"18px 0 10px"}}><h3 style={{fontSize:16,fontWeight:800,color:P.text,margin:0,fontFamily:"'Sora',sans-serif"}}>{children}</h3>{action&&<button onClick={onAction} style={{background:P.purpleDeep,color:"#fff",border:"none",borderRadius:12,padding:"7px 14px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{action}</button>}</div>);
+const Empty=({icon,text})=>(<div style={{textAlign:"center",padding:"36px 20px",color:P.tt}}><div style={{fontSize:38,marginBottom:6}}>{icon}</div><div style={{fontSize:13}}>{text}</div></div>);
+const Modal=({open,onClose,title,children})=>{if(!open)return null;return(<div style={{position:"fixed",inset:0,zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={onClose}><div style={{position:"absolute",inset:0,background:"rgba(30,20,51,0.35)",backdropFilter:"blur(6px)"}}/><div onClick={e=>e.stopPropagation()} style={{position:"relative",background:P.bg,borderRadius:"24px 24px 0 0",width:"100%",maxWidth:480,maxHeight:"90vh",overflow:"auto",padding:"16px 20px 140px",animation:"slideUp 0.25s ease"}}><div style={{width:32,height:4,background:P.border,borderRadius:2,margin:"0 auto 14px"}}/><h3 style={{fontSize:18,fontWeight:800,color:P.text,margin:"0 0 14px",fontFamily:"'Sora',sans-serif"}}>{title}</h3>{children}</div></div>);};
+const F=({label,children})=>(<div style={{marginBottom:12}}><label style={{display:"block",fontSize:10,fontWeight:700,color:P.ts,marginBottom:4,textTransform:"uppercase",letterSpacing:1}}>{label}</label>{children}</div>);
+const inp={width:"100%",padding:"11px 14px",borderRadius:12,border:"1.5px solid "+P.border,fontSize:14,color:P.text,background:P.surface,outline:"none",boxSizing:"border-box",fontFamily:"inherit"};
+const btn={width:"100%",padding:"14px",borderRadius:14,border:"none",background:"linear-gradient(135deg,"+P.grad2+","+P.grad3+")",color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"};
+const Spin=()=>(<div style={{display:"flex",justifyContent:"center",padding:40}}><div style={{width:28,height:28,border:"3px solid "+P.purplePale,borderTopColor:P.purple,borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/></div>);
+const Chip=({options,active,onChange})=>(<div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:4}}>{options.map(o=>(<button key={o.id} onClick={()=>onChange(o.id)} style={{padding:"7px 12px",borderRadius:10,border:"none",whiteSpace:"nowrap",fontFamily:"inherit",background:active===o.id?P.purpleDeep:P.surface,color:active===o.id?"#fff":P.text,fontSize:12,fontWeight:600,cursor:"pointer"}}>{o.label}</button>))}</div>);
 
-/* ═══════════ UI KIT ═══════════ */
-const Badge=({children,color=C.purpleDeep,bg=C.purplePale})=>(
-  <span style={{display:"inline-block",padding:"4px 12px",borderRadius:20,fontSize:11,fontWeight:700,color,background:bg,whiteSpace:"nowrap"}}>{children}</span>
-);
-const Card=({children,onClick,accent,style:s})=>(
-  <div onClick={onClick} style={{background:C.surface,borderRadius:18,padding:"16px 18px",marginBottom:10,boxShadow:C.shadow,cursor:onClick?"pointer":"default",borderLeft:accent?"3px solid "+accent:"none",animation:"fadeIn 0.3s ease",...s}}>{children}</div>
-);
-const StatCard=({icon,val,label,bg=C.purplePale,color=C.purpleDeep})=>(
-  <div style={{flex:1,background:bg,borderRadius:16,padding:"14px 10px",textAlign:"center",minWidth:0}}>
-    <div style={{fontSize:18,marginBottom:2}}>{icon}</div>
-    <div style={{fontSize:18,fontWeight:800,color,fontFamily:"'Sora',sans-serif"}}>{val}</div>
-    <div style={{fontSize:10,color:C.textTer,fontWeight:600,marginTop:2}}>{label}</div>
-  </div>
-);
-const Heading=({children,action,onAction})=>(
-  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"20px 0 12px"}}>
-    <h3 style={{fontSize:16,fontWeight:800,color:C.text,margin:0,fontFamily:"'Sora',sans-serif"}}>{children}</h3>
-    {action&&<button onClick={onAction} style={{background:C.purpleDeep,color:"#fff",border:"none",borderRadius:12,padding:"8px 16px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{action}</button>}
-  </div>
-);
-const Empty=({icon,text})=>(<div style={{textAlign:"center",padding:"40px 20px",color:C.textTer}}><div style={{fontSize:40,marginBottom:8}}>{icon}</div><div style={{fontSize:13}}>{text}</div></div>);
-const ProgressBar=({value,max,color=C.purple})=>(<div style={{background:C.purplePale,borderRadius:6,height:7,overflow:"hidden",flex:1}}><div style={{width:Math.min((value/max)*100,100)+"%",height:"100%",background:color,borderRadius:6,transition:"width 0.5s ease"}}/></div>);
-const MiniChart=({data,height=60})=>{const mx=Math.max(...data,1);return(<div style={{display:"flex",alignItems:"flex-end",gap:3,height}}>{data.map((v,i)=>(<div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}><div style={{width:"100%",maxWidth:22,height:Math.max((v/mx)*(height-14),3),background:"linear-gradient(to top,"+C.purple+","+C.gold+")",borderRadius:5}}/><span style={{fontSize:7,color:C.textTer,fontWeight:600}}>{MS[i]}</span></div>))}</div>);};
-
-/* Modal */
-const Modal=({open,onClose,title,children})=>{
-  if(!open)return null;
-  return(<div style={{position:"fixed",inset:0,zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={onClose}>
-    <div style={{position:"absolute",inset:0,background:"rgba(30,20,51,0.35)",backdropFilter:"blur(6px)"}}/>
-    <div onClick={e=>e.stopPropagation()} style={{position:"relative",background:C.bg,borderRadius:"24px 24px 0 0",width:"100%",maxWidth:480,maxHeight:"90vh",overflow:"auto",padding:"16px 20px 140px",animation:"slideUp 0.25s ease"}}>
-      <div style={{width:32,height:4,background:C.border,borderRadius:2,margin:"0 auto 16px"}}/>
-      <h3 style={{fontSize:18,fontWeight:800,color:C.text,margin:"0 0 16px",fontFamily:"'Sora',sans-serif"}}>{title}</h3>
-      {children}
+/* ═══ AUTH ═══ */
+const Auth=({onAuth})=>{
+  const[m,setM]=useState("login");const[e,sE]=useState("");const[p,sP]=useState("");const[n,sN]=useState("");
+  const[err,sErr]=useState("");const[ld,sLd]=useState(false);
+  const go=async()=>{sErr("");sLd(true);try{if(m==="signup"){const d=await db.up(e,p,n);if(d.access_token)onAuth(d.user);else sErr("Проверьте email");}else{const d=await db.in_(e,p);onAuth(d.user);}}catch(x){sErr(x.message);}sLd(false);};
+  return(<div style={{background:P.bg,minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24}}>
+    <div style={{position:"fixed",top:0,left:0,right:0,height:220,background:"linear-gradient(135deg,"+P.grad1+","+P.grad2+","+P.grad3+")",borderRadius:"0 0 40px 40px",opacity:0.3}}/>
+    <div style={{position:"relative",zIndex:1,width:"100%",maxWidth:340}}>
+      <div style={{textAlign:"center",marginBottom:32}}>
+        <div style={{width:72,height:72,borderRadius:"50%",background:"linear-gradient(135deg,"+P.grad1+","+P.grad2+")",margin:"0 auto 12px",display:"flex",alignItems:"center",justifyContent:"center",fontSize:36,boxShadow:"0 4px 20px rgba(123,94,167,0.3)"}}>🐾</div>
+        <div style={{fontSize:28,fontWeight:800,color:P.purpleDeep,fontFamily:"'Sora',sans-serif"}}>Furora</div>
+        <div style={{fontSize:13,color:P.ts,marginTop:4}}>Всё о вашем питомце</div>
+      </div>
+      <div style={{background:P.surface,borderRadius:22,padding:24,boxShadow:P.shL}}>
+        <div style={{display:"flex",gap:6,marginBottom:18}}>
+          {["login","signup"].map(x=>(<button key={x} onClick={()=>{setM(x);sErr("");}} style={{flex:1,padding:10,borderRadius:12,border:"none",fontFamily:"inherit",fontSize:13,fontWeight:700,cursor:"pointer",background:x===m?"linear-gradient(135deg,"+P.grad2+","+P.grad3+")":P.purplePale,color:x===m?"#fff":P.text}}>{x==="login"?"Войти":"Регистрация"}</button>))}
+        </div>
+        {m==="signup"&&<F label="Имя"><input style={inp} value={n} onChange={x=>sN(x.target.value)} placeholder="Как вас зовут?"/></F>}
+        <F label="Email"><input type="email" style={inp} value={e} onChange={x=>sE(x.target.value)} placeholder="email@example.com"/></F>
+        <F label="Пароль"><input type="password" style={inp} value={p} onChange={x=>sP(x.target.value)} placeholder="Минимум 6 символов"/></F>
+        {err&&<div style={{background:P.redS,borderRadius:10,padding:"8px 12px",marginBottom:12,fontSize:12,color:P.red}}>{err}</div>}
+        <button onClick={go} disabled={ld} style={{...btn,opacity:ld?0.6:1}}>{ld?"...":m==="login"?"Войти":"Создать аккаунт"}</button>
+      </div>
     </div>
   </div>);
 };
-const Field=({label,children})=>(<div style={{marginBottom:12}}><label style={{display:"block",fontSize:10,fontWeight:700,color:C.textSec,marginBottom:4,textTransform:"uppercase",letterSpacing:1}}>{label}</label>{children}</div>);
-const inp={width:"100%",padding:"11px 14px",borderRadius:12,border:"1.5px solid "+C.border,fontSize:14,color:C.text,background:C.surface,outline:"none",boxSizing:"border-box",fontFamily:"inherit"};
-const btnP={width:"100%",padding:"14px",borderRadius:14,border:"none",background:C.purpleDeep,color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"};
-const Spinner=()=>(<div style={{display:"flex",justifyContent:"center",padding:40}}><div style={{width:28,height:28,border:"3px solid "+C.purplePale,borderTopColor:C.purple,borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/></div>);
-const ChipFilter=({options,active,onChange})=>(<div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:4}}>{options.map(o=>(<button key={o.id} onClick={()=>onChange(o.id)} style={{padding:"7px 14px",borderRadius:10,border:"none",whiteSpace:"nowrap",fontFamily:"inherit",background:active===o.id?C.purpleDeep:C.surface,color:active===o.id?"#fff":C.text,fontSize:12,fontWeight:600,cursor:"pointer",boxShadow:active===o.id?"none":C.shadow}}>{o.label}</button>))}</div>);
 
-/* ═══════════ AUTH ═══════════ */
-const AuthScreen=({onAuth})=>{
-  const[mode,setMode]=useState("login");
-  const[email,setEmail]=useState("");const[pw,setPw]=useState("");const[name,setName]=useState("");
-  const[err,setErr]=useState("");const[load,setLoad]=useState(false);
-  const go=async()=>{setErr("");setLoad(true);try{
-    if(mode==="signup"){const d=await sb.signUp(email,pw,name);if(d.access_token)onAuth(d.user);else setErr("Проверьте email для подтверждения");}
-    else{const d=await sb.signIn(email,pw);onAuth(d.user);}
-  }catch(e){setErr(e.message);}setLoad(false);};
-  return(
-    <div style={{background:C.bg,minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24}}>
-      <div style={{position:"fixed",top:-60,right:-40,width:200,height:200,borderRadius:"50%",background:C.purpleSoft,opacity:0.4,filter:"blur(60px)",pointerEvents:"none"}}/>
-      <div style={{position:"fixed",bottom:80,left:-50,width:160,height:160,borderRadius:"50%",background:C.goldSoft,opacity:0.5,filter:"blur(40px)",pointerEvents:"none"}}/>
-      <div style={{position:"relative",zIndex:1,width:"100%",maxWidth:340}}>
-        <div style={{textAlign:"center",marginBottom:36}}>
-          <div style={{fontSize:44,marginBottom:8}}>🐾</div>
-          <div style={{fontSize:30,fontWeight:800,color:C.purpleDeep,fontFamily:"'Sora',sans-serif",letterSpacing:-0.5}}>furura</div>
-          <div style={{fontSize:13,color:C.textSec,marginTop:4}}>Всё о вашем питомце</div>
-        </div>
-        <div style={{background:C.surface,borderRadius:22,padding:24,boxShadow:C.shadowLg}}>
-          <div style={{display:"flex",gap:6,marginBottom:20}}>
-            {["login","signup"].map(m=>(<button key={m} onClick={()=>{setMode(m);setErr("");}} style={{flex:1,padding:10,borderRadius:12,border:"none",fontFamily:"inherit",fontSize:13,fontWeight:700,cursor:"pointer",background:m===mode?C.purpleDeep:C.purplePale,color:m===mode?"#fff":C.text}}>{m==="login"?"Войти":"Регистрация"}</button>))}
-          </div>
-          {mode==="signup"&&<Field label="Имя"><input style={inp} value={name} onChange={e=>setName(e.target.value)} placeholder="Как вас зовут?"/></Field>}
-          <Field label="Email"><input type="email" style={inp} value={email} onChange={e=>setEmail(e.target.value)} placeholder="email@example.com"/></Field>
-          <Field label="Пароль"><input type="password" style={inp} value={pw} onChange={e=>setPw(e.target.value)} placeholder="Минимум 6 символов"/></Field>
-          {err&&<div style={{background:C.redSoft,borderRadius:10,padding:"8px 12px",marginBottom:12,fontSize:12,color:C.red}}>{err}</div>}
-          <button onClick={go} disabled={load} style={{...btnP,opacity:load?0.6:1}}>{load?"...":mode==="login"?"Войти":"Создать аккаунт"}</button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-/* ═══════════ DOG CARD (main entity with nested tabs) ═══════════ */
-const DogProfile=({dog,userId,health,shows,groom,setHealth,setShows,setGroom,onBack})=>{
-  const[tab,setTab]=useState("info");
-  const[showAdd,setShowAdd]=useState(false);
-  const myHealth=health.filter(h=>h.dog_id===dog.id);
-  const myShows=shows.filter(s=>s.dog_id===dog.id);
-  const myGroom=groom.filter(g=>g.dog_id===dog.id);
-  const tabs=[{id:"info",label:"Инфо"},{id:"health",label:"Здоровье"},{id:"shows",label:"Выставки"},{id:"groom",label:"Груминг"}];
-  const hIcons={"Кардиолог":"❤️","Стоматолог":"🦷","Вакцинация":"💉","МРТ":"🧠","Офтальмолог":"👁","Анализы":"🧪","Обработка":"🧴"};
-  const gIcons={"Купание + сушка":"🛁","Стрижка лап + когти":"✂️","Полный груминг":"💇","Чистка ушей":"👂","Расчёсывание":"🪮"};
-
-  /* Add forms state */
-  const[hForm,setHF]=useState({date:"",type:"",result:"",next_visit:""});
-  const[sForm,setSF]=useState({date:"",judge_name:"",place:"",handler:"",title_earned:"",cost_registration:"",cost_vet_control:"",cost_handler:"",cost_hotel:"",cost_travel:"",cost_other:""});
-  const[gForm,setGF]=useState({date:"",procedure_name:"",notes:""});
-  const[addType,setAddType]=useState("");
-
-  const addHealth=async()=>{try{const[s]=await sb.ins("health_records",{user_id:userId,dog_id:dog.id,date:hForm.date,type:hForm.type,result:hForm.result,next_visit:hForm.next_visit||null});setHealth(p=>[s,...p]);setShowAdd(false);setHF({date:"",type:"",result:"",next_visit:""});}catch(e){alert(e.message);}};
-  const addShow=async()=>{try{const cost=(parseInt(sForm.cost_registration)||0)+(parseInt(sForm.cost_vet_control)||0)+(parseInt(sForm.cost_handler)||0)+(parseInt(sForm.cost_hotel)||0)+(parseInt(sForm.cost_travel)||0)+(parseInt(sForm.cost_other)||0);
-    const[s]=await sb.ins("shows",{user_id:userId,dog_id:dog.id,date:sForm.date,judge_name:sForm.judge_name,place:sForm.place,handler:sForm.handler,title_earned:sForm.title_earned||null,cost,cost_registration:parseInt(sForm.cost_registration)||0,cost_vet_control:parseInt(sForm.cost_vet_control)||0,cost_handler:parseInt(sForm.cost_handler)||0,cost_hotel:parseInt(sForm.cost_hotel)||0,cost_travel:parseInt(sForm.cost_travel)||0,cost_other:parseInt(sForm.cost_other)||0});
-    setShows(p=>[s,...p]);setShowAdd(false);setSF({date:"",judge_name:"",place:"",handler:"",title_earned:"",cost_registration:"",cost_vet_control:"",cost_handler:"",cost_hotel:"",cost_travel:"",cost_other:""});}catch(e){alert(e.message);}};
-  const addGroom=async()=>{try{const[s]=await sb.ins("grooming",{user_id:userId,dog_id:dog.id,date:gForm.date,procedure_name:gForm.procedure_name,notes:gForm.notes||null});setGroom(p=>[s,...p]);setShowAdd(false);setGF({date:"",procedure_name:"",notes:""});}catch(e){alert(e.message);}};
+/* ═══ DOG PROFILE ═══ */
+const DogProfile=({dog,uid,health,shows,groom,setHealth,setShows,setGroom,onBack})=>{
+  const[tab,setTab]=useState("info");const[showAdd,setShowAdd]=useState(false);const[addT,setAddT]=useState("");
+  const mH=health.filter(h=>h.dog_id===dog.id),mS=shows.filter(s=>s.dog_id===dog.id),mG=groom.filter(g=>g.dog_id===dog.id);
+  const hI={"Кардиолог":"❤️","Стоматолог":"🦷","Вакцинация":"💉","МРТ":"🧠","Офтальмолог":"👁","Анализы":"🧪","Обработка":"🧴"};
+  const gI={"Купание + сушка":"🛁","Стрижка лап + когти":"✂️","Полный груминг":"💇","Чистка ушей":"👂","Расчёсывание":"🪮"};
+  const[hF,sHF]=useState({date:"",type:"",result:"",next_visit:""});
+  const[sF,sSF]=useState({date:"",judge_name:"",place:"",handler:"",title_earned:"",cost_registration:"",cost_vet_control:"",cost_handler:"",cost_hotel:"",cost_travel:"",cost_other:""});
+  const[gF,sGF]=useState({date:"",procedure_name:"",notes:""});
+  const aH=async()=>{try{const[s]=await db.ins("health_records",{user_id:uid,dog_id:dog.id,...hF,next_visit:hF.next_visit||null});setHealth(p=>[s,...p]);setShowAdd(false);sHF({date:"",type:"",result:"",next_visit:""});}catch(e){alert(e.message);}};
+  const aS=async()=>{try{const c=["cost_registration","cost_vet_control","cost_handler","cost_hotel","cost_travel","cost_other"].reduce((s,k)=>s+(parseInt(sF[k])||0),0);const d={user_id:uid,dog_id:dog.id,date:sF.date,judge_name:sF.judge_name,place:sF.place,handler:sF.handler,title_earned:sF.title_earned||null,cost:c,cost_registration:parseInt(sF.cost_registration)||0,cost_vet_control:parseInt(sF.cost_vet_control)||0,cost_handler:parseInt(sF.cost_handler)||0,cost_hotel:parseInt(sF.cost_hotel)||0,cost_travel:parseInt(sF.cost_travel)||0,cost_other:parseInt(sF.cost_other)||0};const[s]=await db.ins("shows",d);setShows(p=>[s,...p]);setShowAdd(false);sSF({date:"",judge_name:"",place:"",handler:"",title_earned:"",cost_registration:"",cost_vet_control:"",cost_handler:"",cost_hotel:"",cost_travel:"",cost_other:""});}catch(e){alert(e.message);}};
+  const aG=async()=>{try{const[s]=await db.ins("grooming",{user_id:uid,dog_id:dog.id,date:gF.date,procedure_name:gF.procedure_name,notes:gF.notes||null});setGroom(p=>[s,...p]);setShowAdd(false);sGF({date:"",procedure_name:"",notes:""});}catch(e){alert(e.message);}};
 
   return(<div>
-    {/* Back button + dog header */}
-    <button onClick={onBack} style={{background:"none",border:"none",color:C.purpleDeep,fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",padding:"4px 0",marginBottom:12}}>← Назад</button>
-    <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:16}}>
-      <div style={{width:56,height:56,borderRadius:"50%",background:dog.sex==="F"?C.purpleSoft:C.goldSoft,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,fontWeight:800,color:dog.sex==="F"?C.purple:C.gold,flexShrink:0}}>{dog.sex==="F"?"♀":"♂"}</div>
-      <div><div style={{fontSize:22,fontWeight:800,fontFamily:"'Sora',sans-serif"}}>{dog.name}</div><div style={{fontSize:13,color:C.textSec}}>{dog.breed||"Порода не указана"} · {dog.color||""}</div></div>
+    <button onClick={onBack} style={{background:"none",border:"none",color:P.purpleDeep,fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:10}}>← Назад</button>
+    <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:14}}>
+      <div style={{width:56,height:56,borderRadius:"50%",background:dog.sex==="F"?"linear-gradient(135deg,#E4DDFB,#C9B8F0)":"linear-gradient(135deg,#FBF3DC,#E8D9A0)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,fontWeight:800,color:dog.sex==="F"?P.purple:P.gold,flexShrink:0}}>{dog.sex==="F"?"♀":"♂"}</div>
+      <div><div style={{fontSize:22,fontWeight:800,fontFamily:"'Sora',sans-serif"}}>{dog.name}</div><div style={{fontSize:13,color:P.ts}}>{dog.breed||""}{dog.color?" · "+dog.color:""}</div></div>
+    </div>
+    <div style={{display:"flex",gap:4,marginBottom:14,background:P.bg2,borderRadius:14,padding:3}}>
+      {[{id:"info",l:"Инфо"},{id:"health",l:"Здоровье"},{id:"shows",l:"Выставки"},{id:"groom",l:"Груминг"}].map(t=>(<button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,padding:"9px 6px",borderRadius:11,border:"none",fontFamily:"inherit",fontSize:12,fontWeight:tab===t.id?700:500,cursor:"pointer",background:tab===t.id?P.surface:"transparent",color:tab===t.id?P.text:P.tt,boxShadow:tab===t.id?P.sh:"none"}}>{t.l}</button>))}
     </div>
 
-    {/* Tabs */}
-    <div style={{display:"flex",gap:4,marginBottom:16,background:C.bg2,borderRadius:12,padding:3}}>
-      {tabs.map(t=>(<button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,padding:"9px 8px",borderRadius:10,border:"none",fontFamily:"inherit",fontSize:12,fontWeight:tab===t.id?700:500,cursor:"pointer",background:tab===t.id?C.surface:"transparent",color:tab===t.id?C.text:C.textTer,boxShadow:tab===t.id?C.shadow:"none",transition:"all 0.2s"}}>{t.label}</button>))}
-    </div>
+    {tab==="info"&&<Card>{[["Дата рождения",dog.born||"—"],["Порода",dog.breed||"—"],["Статус",dog.status||"—"],["В разведении",dog.breeding?"Да":"Нет"],["Родословная РКФ",dog.pedigree_number||"—"],["Чип",dog.chip_number||"—"],["Клеймо",dog.tattoo_number||"—"]].map(([l,v],i)=>(<div key={i} style={{display:"flex",justifyContent:"space-between",padding:"9px 0",borderBottom:i<6?"1px solid "+P.border:"none"}}><span style={{fontSize:13,color:P.ts}}>{l}</span><span style={{fontSize:13,fontWeight:600}}>{v}</span></div>))}</Card>}
 
-    {/* INFO TAB */}
-    {tab==="info"&&(<div>
-      {[
-        {l:"Дата рождения",v:dog.born||"—"},
-        {l:"Статус",v:dog.status||"—"},
-        {l:"В разведении",v:dog.breeding?"Да":"Нет"},
-        {l:"Родословная (РКФ)",v:dog.pedigree_number||"—"},
-        {l:"Чип",v:dog.chip_number||"—"},
-        {l:"Клеймо",v:dog.tattoo_number||"—"},
-      ].map((r,i)=>(<div key={i} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:i<5?"1px solid "+C.border:"none"}}>
-        <span style={{fontSize:13,color:C.textSec}}>{r.l}</span>
-        <span style={{fontSize:13,fontWeight:600}}>{r.v}</span>
-      </div>))}
-    </div>)}
+    {tab==="health"&&<div>
+      <Heading action="+ Запись" onAction={()=>{setAddT("h");setShowAdd(true);}}>Журнал</Heading>
+      {mH.length===0&&<Empty icon="🏥" text="Записей пока нет"/>}
+      {mH.sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(h=>(<Card key={h.id} accent={P.purple}><div style={{display:"flex",gap:10}}><div style={{width:36,height:36,borderRadius:10,background:P.purplePale,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>{hI[h.type]||"📋"}</div><div style={{flex:1}}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontWeight:700,fontSize:13}}>{h.type}</span><span style={{fontSize:11,color:P.tt}}>{h.date}</span></div>{h.result&&<div style={{fontSize:12,color:P.ts,marginTop:2}}>{h.result}</div>}{h.next_visit&&<div style={{fontSize:11,color:P.orange,fontWeight:600,marginTop:2}}>→ {h.next_visit}</div>}</div></div></Card>))}
+    </div>}
 
-    {/* HEALTH TAB */}
-    {tab==="health"&&(<div>
-      <Heading action="+ Запись" onAction={()=>{setAddType("health");setShowAdd(true);}}>Вет. журнал</Heading>
-      {myHealth.length===0&&<Empty icon="🏥" text="Записей пока нет"/>}
-      {myHealth.sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(h=>(
-        <Card key={h.id} accent={C.purple}><div style={{display:"flex",gap:10}}>
-          <div style={{width:38,height:38,borderRadius:12,background:C.purplePale,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>{hIcons[h.type]||"📋"}</div>
-          <div style={{flex:1}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontWeight:700,fontSize:13}}>{h.type}</span><span style={{fontSize:11,color:C.textTer}}>{h.date}</span></div>
-            {h.result&&<div style={{fontSize:12,color:C.textSec,marginTop:3}}>{h.result}</div>}
-            {h.next_visit&&<div style={{fontSize:11,color:C.orange,fontWeight:600,marginTop:3}}>→ Следующий: {h.next_visit}</div>}
-          </div>
-        </div></Card>))}
-    </div>)}
+    {tab==="shows"&&<div>
+      <Heading action="+ Выставка" onAction={()=>{setAddT("s");setShowAdd(true);}}>Выставки</Heading>
+      {mS.length===0&&<Empty icon="🏆" text="Выставок пока нет"/>}
+      {mS.sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(s=>{const t=(s.cost_registration||0)+(s.cost_vet_control||0)+(s.cost_handler||0)+(s.cost_hotel||0)+(s.cost_travel||0)+(s.cost_other||0);return(<Card key={s.id} accent={s.title_earned?P.gold:undefined}><div style={{display:"flex",justifyContent:"space-between"}}><div style={{flex:1}}><div style={{fontWeight:700,fontSize:14}}>Судья: {s.judge_name||"—"}</div><div style={{fontSize:12,color:P.ts,marginTop:2}}>{s.place} · {s.date}</div>{s.handler&&<div style={{fontSize:11,color:P.tt,marginTop:2}}>Хэндлер: {s.handler}</div>}</div><div style={{textAlign:"right"}}>{s.title_earned&&<Badge c={P.gold} bg={P.goldPale}>{s.title_earned}</Badge>}<div style={{fontSize:13,color:P.red,fontWeight:700,marginTop:4}}>{fmt(t||s.cost||0)}</div></div></div>
+        {t>0&&<div style={{marginTop:8,paddingTop:6,borderTop:"1px solid "+P.border,display:"flex",flexWrap:"wrap",gap:4}}>{[["Рег.",s.cost_registration],["Вет.",s.cost_vet_control],["Хэндлер",s.cost_handler],["Отель",s.cost_hotel],["Дорога",s.cost_travel],["Другое",s.cost_other]].filter(([,v])=>v>0).map(([l,v],i)=>(<span key={i} style={{fontSize:10,color:P.ts,background:P.bg2,padding:"2px 7px",borderRadius:6}}>{l}: {fmt(v)}</span>))}</div>}
+      </Card>);})}
+    </div>}
 
-    {/* SHOWS TAB */}
-    {tab==="shows"&&(<div>
-      <Heading action="+ Выставка" onAction={()=>{setAddType("show");setShowAdd(true);}}>Выставки</Heading>
-      {myShows.length===0&&<Empty icon="🏆" text="Выставок пока нет"/>}
-      {myShows.sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(s=>{
-        const total=(s.cost_registration||0)+(s.cost_vet_control||0)+(s.cost_handler||0)+(s.cost_hotel||0)+(s.cost_travel||0)+(s.cost_other||0);
-        return(<Card key={s.id} accent={s.title_earned?C.gold:undefined}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-            <div style={{flex:1}}>
-              <div style={{fontWeight:700,fontSize:14}}>Судья: {s.judge_name||"—"}</div>
-              <div style={{fontSize:12,color:C.textSec,marginTop:2}}>{s.place} · {s.date}</div>
-              {s.handler&&<div style={{fontSize:11,color:C.textTer,marginTop:2}}>Хэндлер: {s.handler}</div>}
-            </div>
-            <div style={{textAlign:"right"}}>{s.title_earned&&<Badge color={C.gold} bg={C.goldPale}>{s.title_earned}</Badge>}
-              <div style={{fontSize:13,color:C.red,fontWeight:700,marginTop:4}}>{fmtRub(total||s.cost||0)}</div>
-            </div>
-          </div>
-          {/* Expense breakdown */}
-          {total>0&&<div style={{marginTop:10,paddingTop:8,borderTop:"1px solid "+C.border,display:"flex",flexWrap:"wrap",gap:6}}>
-            {[["Регистрация",s.cost_registration],["Вет.контроль",s.cost_vet_control],["Хэндлер",s.cost_handler],["Отель",s.cost_hotel],["Дорога",s.cost_travel],["Другое",s.cost_other]].filter(([,v])=>v>0).map(([l,v],i)=>(
-              <span key={i} style={{fontSize:10,color:C.textSec,background:C.bg2,padding:"3px 8px",borderRadius:6}}>{l}: {fmtRub(v)}</span>
-            ))}
-          </div>}
-        </Card>);})}
-    </div>)}
+    {tab==="groom"&&<div>
+      <Heading action="+ Процедура" onAction={()=>{setAddT("g");setShowAdd(true);}}>Груминг</Heading>
+      {mG.length===0&&<Empty icon="✂️" text="Записей пока нет"/>}
+      {mG.sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(g=>(<Card key={g.id}><div style={{display:"flex",gap:10,alignItems:"center"}}><div style={{width:36,height:36,borderRadius:10,background:P.purplePale,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>{gI[g.procedure_name]||"✨"}</div><div style={{flex:1}}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontWeight:700,fontSize:13}}>{g.procedure_name}</span><span style={{fontSize:11,color:P.tt}}>{g.date}</span></div>{g.notes&&<div style={{fontSize:12,color:P.ts,marginTop:2}}>{g.notes}</div>}</div></div></Card>))}
+    </div>}
 
-    {/* GROOM TAB */}
-    {tab==="groom"&&(<div>
-      <Heading action="+ Процедура" onAction={()=>{setAddType("groom");setShowAdd(true);}}>Груминг</Heading>
-      {myGroom.length===0&&<Empty icon="✂️" text="Записей пока нет"/>}
-      {myGroom.sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(g=>(
-        <Card key={g.id}><div style={{display:"flex",gap:10,alignItems:"center"}}>
-          <div style={{width:38,height:38,borderRadius:12,background:C.purplePale,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>{gIcons[g.procedure_name]||"✨"}</div>
-          <div style={{flex:1}}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontWeight:700,fontSize:13}}>{g.procedure_name}</span><span style={{fontSize:11,color:C.textTer}}>{g.date}</span></div>
-            {g.notes&&<div style={{fontSize:12,color:C.textSec,marginTop:2}}>{g.notes}</div>}
-          </div>
-        </div></Card>))}
-    </div>)}
-
-    {/* ADD MODALS */}
-    <Modal open={showAdd&&addType==="health"} onClose={()=>setShowAdd(false)} title="Запись о здоровье">
-      <Field label="Дата"><input type="date" style={inp} value={hForm.date} onChange={e=>setHF({...hForm,date:e.target.value})}/></Field>
-      <Field label="Тип"><select style={inp} value={hForm.type} onChange={e=>setHF({...hForm,type:e.target.value})}><option value="">Выберите...</option>{["Кардиолог","Стоматолог","Вакцинация","МРТ","Офтальмолог","Анализы","Обработка","Другое"].map(t=><option key={t}>{t}</option>)}</select></Field>
-      <Field label="Результат"><input style={inp} value={hForm.result} onChange={e=>setHF({...hForm,result:e.target.value})}/></Field>
-      <Field label="Следующий визит"><input type="date" style={inp} value={hForm.next_visit} onChange={e=>setHF({...hForm,next_visit:e.target.value})}/></Field>
-      <button onClick={addHealth} style={btnP}>Сохранить</button>
+    {/* MODALS */}
+    <Modal open={showAdd&&addT==="h"} onClose={()=>setShowAdd(false)} title="Запись о здоровье">
+      <F label="Дата"><input type="date" style={inp} value={hF.date} onChange={e=>sHF({...hF,date:e.target.value})}/></F>
+      <F label="Тип"><select style={inp} value={hF.type} onChange={e=>sHF({...hF,type:e.target.value})}><option value="">Выберите...</option>{["Кардиолог","Стоматолог","Вакцинация","МРТ","Офтальмолог","Анализы","Обработка","Другое"].map(t=><option key={t}>{t}</option>)}</select></F>
+      <F label="Результат"><input style={inp} value={hF.result} onChange={e=>sHF({...hF,result:e.target.value})}/></F>
+      <F label="Следующий визит"><input type="date" style={inp} value={hF.next_visit} onChange={e=>sHF({...hF,next_visit:e.target.value})}/></F>
+      <button onClick={aH} style={btn}>Сохранить</button>
     </Modal>
-
-    <Modal open={showAdd&&addType==="show"} onClose={()=>setShowAdd(false)} title="Новая выставка">
-      <Field label="Дата"><input type="date" style={inp} value={sForm.date} onChange={e=>setSF({...sForm,date:e.target.value})}/></Field>
-      <Field label="Судья (ФИО)"><input style={inp} value={sForm.judge_name} onChange={e=>setSF({...sForm,judge_name:e.target.value})}/></Field>
-      <Field label="Место"><input style={inp} value={sForm.place} onChange={e=>setSF({...sForm,place:e.target.value})}/></Field>
-      <Field label="Хэндлер"><input style={inp} value={sForm.handler} onChange={e=>setSF({...sForm,handler:e.target.value})}/></Field>
-      <Field label="Титул"><input style={inp} value={sForm.title_earned} onChange={e=>setSF({...sForm,title_earned:e.target.value})} placeholder="JCAC, CACIB..."/></Field>
-      <div style={{background:C.bg2,borderRadius:14,padding:14,marginBottom:12}}>
-        <div style={{fontSize:10,fontWeight:700,color:C.textSec,marginBottom:10,textTransform:"uppercase",letterSpacing:1}}>💰 Расходы (детализация)</div>
-        {[["Регистрация","cost_registration"],["Вет.контроль","cost_vet_control"],["Хэндлер","cost_handler"],["Отель","cost_hotel"],["Дорога","cost_travel"],["Другое","cost_other"]].map(([l,k])=>(
-          <div key={k} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-            <span style={{fontSize:12,color:C.textSec,minWidth:90}}>{l}</span>
-            <input type="number" style={{...inp,padding:"8px 10px",fontSize:13}} value={sForm[k]} onChange={e=>setSF({...sForm,[k]:e.target.value})} placeholder="0"/>
-          </div>
-        ))}
+    <Modal open={showAdd&&addT==="s"} onClose={()=>setShowAdd(false)} title="Новая выставка">
+      <F label="Дата"><input type="date" style={inp} value={sF.date} onChange={e=>sSF({...sF,date:e.target.value})}/></F>
+      <F label="Судья (ФИО)"><input style={inp} value={sF.judge_name} onChange={e=>sSF({...sF,judge_name:e.target.value})}/></F>
+      <F label="Место"><input style={inp} value={sF.place} onChange={e=>sSF({...sF,place:e.target.value})}/></F>
+      <F label="Хэндлер"><input style={inp} value={sF.handler} onChange={e=>sSF({...sF,handler:e.target.value})}/></F>
+      <F label="Титул"><input style={inp} value={sF.title_earned} onChange={e=>sSF({...sF,title_earned:e.target.value})} placeholder="JCAC, CACIB..."/></F>
+      <div style={{background:P.bg2,borderRadius:14,padding:12,marginBottom:12}}>
+        <div style={{fontSize:10,fontWeight:700,color:P.ts,marginBottom:8,textTransform:"uppercase",letterSpacing:1}}>💰 Расходы</div>
+        {[["Регистрация","cost_registration"],["Вет.контроль","cost_vet_control"],["Хэндлер","cost_handler"],["Отель","cost_hotel"],["Дорога","cost_travel"],["Другое","cost_other"]].map(([l,k])=>(<div key={k} style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}><span style={{fontSize:12,color:P.ts,minWidth:85}}>{l}</span><input type="number" style={{...inp,padding:"8px 10px",fontSize:13}} value={sF[k]} onChange={e=>sSF({...sF,[k]:e.target.value})} placeholder="0"/></div>))}
       </div>
-      <button onClick={addShow} style={btnP}>Сохранить</button>
+      <button onClick={aS} style={btn}>Сохранить</button>
     </Modal>
-
-    <Modal open={showAdd&&addType==="groom"} onClose={()=>setShowAdd(false)} title="Процедура груминга">
-      <Field label="Дата"><input type="date" style={inp} value={gForm.date} onChange={e=>setGF({...gForm,date:e.target.value})}/></Field>
-      <Field label="Процедура"><select style={inp} value={gForm.procedure_name} onChange={e=>setGF({...gForm,procedure_name:e.target.value})}><option value="">Выберите...</option>{["Купание + сушка","Стрижка лап + когти","Полный груминг","Чистка ушей","Расчёсывание","Другое"].map(p=><option key={p}>{p}</option>)}</select></Field>
-      <Field label="Заметки"><input style={inp} value={gForm.notes} onChange={e=>setGF({...gForm,notes:e.target.value})}/></Field>
-      <button onClick={addGroom} style={btnP}>Сохранить</button>
+    <Modal open={showAdd&&addT==="g"} onClose={()=>setShowAdd(false)} title="Груминг">
+      <F label="Дата"><input type="date" style={inp} value={gF.date} onChange={e=>sGF({...gF,date:e.target.value})}/></F>
+      <F label="Процедура"><select style={inp} value={gF.procedure_name} onChange={e=>sGF({...gF,procedure_name:e.target.value})}><option value="">Выберите...</option>{["Купание + сушка","Стрижка лап + когти","Полный груминг","Чистка ушей","Расчёсывание","Другое"].map(p=><option key={p}>{p}</option>)}</select></F>
+      <F label="Заметки"><input style={inp} value={gF.notes} onChange={e=>sGF({...gF,notes:e.target.value})}/></F>
+      <button onClick={aG} style={btn}>Сохранить</button>
     </Modal>
   </div>);
 };
 
-/* ═══════════ OVERVIEW (main screen) ═══════════ */
-const Overview=({dogs,income,expenses,health,onDogClick,userId,setDogs})=>{
-  const tI=income.reduce((s,i)=>s+i.amount,0),tE=expenses.reduce((s,e)=>s+e.amount,0),profit=tI-tE;
-  const upcoming=health.filter(h=>{if(!h.next_visit)return false;const d=(new Date(h.next_visit)-new Date())/864e5;return d>0&&d<=90;});
-  const mI=Array(12).fill(0);income.forEach(i=>{mI[new Date(i.date).getMonth()]+=i.amount;});
+/* ═══ HOME TAB ═══ */
+const HomeTab=({dogs,health,income,expenses,onDog,uid,setDogs})=>{
+  const tI=income.reduce((s,i)=>s+i.amount,0),tE=expenses.reduce((s,e)=>s+e.amount,0);
+  const upcoming=health.filter(h=>{if(!h.next_visit)return false;const d=(new Date(h.next_visit)-new Date())/864e5;return d>0&&d<=90;}).sort((a,b)=>new Date(a.next_visit)-new Date(b.next_visit));
   const dogName=id=>dogs.find(d=>d.id===id)?.name||"";
-
-  const[showAdd,setShowAdd]=useState(false);
-  const[form,setForm]=useState({name:"",breed:"",sex:"F",born:"",color:"",status:"Активна",breeding:false,pedigree_number:"",chip_number:"",tattoo_number:""});
-  const addDog=async()=>{try{const[s]=await sb.ins("dogs",{user_id:userId,...form,born:form.born||null,breeding:form.breeding});setDogs(p=>[...p,s]);setShowAdd(false);setForm({name:"",breed:"",sex:"F",born:"",color:"",status:"Активна",breeding:false,pedigree_number:"",chip_number:"",tattoo_number:""});}catch(e){alert(e.message);}};
+  const daysUntil=d=>{const x=Math.ceil((new Date(d)-new Date())/864e5);return x===0?"Сегодня":x===1?"Завтра":"через "+x+" дн."};
 
   return(<div>
-    <div style={{fontSize:13,color:C.textSec,fontWeight:600}}>Привет! 👋</div>
-    <div style={{fontSize:22,fontWeight:800,color:C.text,fontFamily:"'Sora',sans-serif",marginTop:2}}>Обзор</div>
-
-    {/* Balance card */}
-    <div style={{background:"linear-gradient(135deg,"+C.purpleDeep+","+C.purple+")",borderRadius:20,padding:20,marginTop:14,position:"relative",overflow:"hidden"}}>
-      <div style={{position:"absolute",top:-30,right:-20,width:110,height:110,borderRadius:"50%",background:"rgba(255,255,255,0.06)"}}/>
-      <div style={{position:"relative",zIndex:1}}>
-        <div style={{fontSize:11,color:"rgba(255,255,255,0.55)",fontWeight:600}}>Баланс</div>
-        <div style={{fontSize:30,fontWeight:800,color:"#fff",fontFamily:"'Sora',sans-serif",marginTop:2}}>{fmtRub(profit)}</div>
-        <div style={{display:"flex",gap:20,marginTop:12}}>
-          <div><span style={{fontSize:10,color:"rgba(255,255,255,0.45)"}}>Доход </span><span style={{fontSize:13,fontWeight:700,color:"#86EFAC"}}>{fmtRub(tI)}</span></div>
-          <div><span style={{fontSize:10,color:"rgba(255,255,255,0.45)"}}>Расход </span><span style={{fontSize:13,fontWeight:700,color:"#FCA5A5"}}>{fmtRub(tE)}</span></div>
+    {/* Gradient Header */}
+    <div style={{background:"linear-gradient(135deg,"+P.grad1+","+P.grad2+","+P.grad3+")",borderRadius:"0 0 28px 28px",padding:"16px 20px 22px",marginTop:-4,marginLeft:-18,marginRight:-18,marginBottom:16}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{width:38,height:38,borderRadius:"50%",background:"rgba(255,255,255,0.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🐾</div>
+          <span style={{fontSize:20,fontWeight:800,color:"#fff",fontFamily:"'Sora',sans-serif"}}>Furora</span>
         </div>
+        <div style={{position:"relative"}}>
+          <div style={{width:38,height:38,borderRadius:"50%",background:"rgba(255,255,255,0.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>🔔</div>
+          {upcoming.length>0&&<div style={{position:"absolute",top:-2,right:-2,width:18,height:18,borderRadius:"50%",background:P.red,color:"#fff",fontSize:10,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center"}}>{upcoming.length}</div>}
+        </div>
+      </div>
+      <div style={{color:"rgba(255,255,255,0.8)",fontSize:14,fontWeight:500}}>Добрый день 🐾</div>
+    </div>
+
+    {/* My Dogs */}
+    <Heading>Мои собаки</Heading>
+    <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:8}}>
+      {dogs.map(d=>(<div key={d.id} onClick={()=>onDog(d)} style={{minWidth:140,background:P.surface,borderRadius:18,padding:"14px 14px",boxShadow:P.sh,cursor:"pointer",flexShrink:0}}>
+        <div style={{width:44,height:44,borderRadius:"50%",background:d.sex==="F"?"linear-gradient(135deg,#E4DDFB,#C9B8F0)":"linear-gradient(135deg,#FBF3DC,#E8D9A0)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:800,color:d.sex==="F"?P.purple:P.gold,margin:"0 auto 8px"}}>{d.sex==="F"?"♀":"♂"}</div>
+        <div style={{textAlign:"center"}}><div style={{fontWeight:700,fontSize:14}}>{d.name}</div><div style={{fontSize:11,color:P.ts,marginTop:2}}>{d.breed||""}</div></div>
+        {(()=>{const dh=health.filter(h=>h.dog_id===d.id&&h.next_visit);const next=dh.sort((a,b)=>new Date(a.next_visit)-new Date(b.next_visit))[0];return next?<div style={{fontSize:10,color:P.orange,fontWeight:600,textAlign:"center",marginTop:6}}>🩺 {next.next_visit}</div>:null;})()}
+      </div>))}
+      <div onClick={()=>document.getElementById("addDogBtn")?.click()} style={{minWidth:120,background:P.purplePale,borderRadius:18,padding:"14px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0,border:"2px dashed "+P.purple+"40"}}>
+        <div style={{fontSize:28,color:P.purple,marginBottom:4}}>+</div>
+        <div style={{fontSize:12,fontWeight:600,color:P.purple}}>Добавить</div>
       </div>
     </div>
 
-    {/* Reminders */}
-    {upcoming.length>0&&<>
-      <Heading>🔔 Напоминания</Heading>
-      {upcoming.map(h=>(<Card key={h.id} accent={C.orange}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <div style={{width:36,height:36,borderRadius:10,background:C.orangeSoft,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>⏰</div>
-          <div style={{flex:1}}><div style={{fontWeight:700,fontSize:13}}>{dogName(h.dog_id)} — {h.type}</div><div style={{fontSize:11,color:C.orange,marginTop:2}}>{h.next_visit}</div></div>
-        </div>
-      </Card>))}
+    {/* Reminders grid */}
+    {upcoming.length>0&&<><Heading>🔔 Напоминания</Heading>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+        {upcoming.slice(0,4).map(h=>(<div key={h.id} style={{background:P.surface,borderRadius:16,padding:"12px 14px",boxShadow:P.sh}}>
+          <div style={{fontSize:13,fontWeight:700}}>{h.type}</div>
+          <div style={{fontSize:12,color:P.purple,fontWeight:600,marginTop:2}}>{dogName(h.dog_id)}</div>
+          <div style={{fontSize:11,color:P.orange,fontWeight:600,marginTop:4}}>🗓 {daysUntil(h.next_visit)}</div>
+        </div>))}
+      </div>
     </>}
 
-    {income.length>0&&<><Heading>Доходы по месяцам</Heading><Card><MiniChart data={mI}/></Card></>}
-
-    {/* Dogs list */}
-    <Heading action="+ Собака" onAction={()=>setShowAdd(true)}>Мои питомцы</Heading>
-    {dogs.length===0&&<Empty icon="🐾" text="Добавьте первого питомца"/>}
-    {dogs.map(d=>(<Card key={d.id} onClick={()=>onDogClick(d)}>
-      <div style={{display:"flex",alignItems:"center",gap:12}}>
-        <div style={{width:44,height:44,borderRadius:"50%",background:d.sex==="F"?C.purpleSoft:C.goldSoft,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:800,color:d.sex==="F"?C.purple:C.gold,flexShrink:0}}>{d.sex==="F"?"♀":"♂"}</div>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{fontWeight:700,fontSize:14}}>{d.name}</div>
-          <div style={{fontSize:12,color:C.textSec,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.breed||""}{d.color?" · "+d.color:""}</div>
-        </div>
-        <span style={{fontSize:16,color:C.textTer}}>›</span>
-      </div>
-    </Card>))}
-
-    {/* Add dog modal */}
-    <Modal open={showAdd} onClose={()=>setShowAdd(false)} title="Новый питомец">
-      <Field label="Кличка"><input style={inp} value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></Field>
-      <Field label="Порода"><input style={inp} value={form.breed} onChange={e=>setForm({...form,breed:e.target.value})} placeholder="Кавалер Кинг Чарльз, Корги..."/></Field>
+    {/* Quick finance */}
+    {(tI>0||tE>0)&&<><Heading>💰 Финансы</Heading>
       <div style={{display:"flex",gap:8}}>
-        <div style={{flex:1}}><Field label="Пол"><select style={inp} value={form.sex} onChange={e=>setForm({...form,sex:e.target.value})}><option value="F">♀ Сука</option><option value="M">♂ Кобель</option></select></Field></div>
-        <div style={{flex:1}}><Field label="Дата рождения"><input type="date" style={inp} value={form.born} onChange={e=>setForm({...form,born:e.target.value})}/></Field></div>
+        <div style={{flex:1,background:P.greenS,borderRadius:14,padding:"12px",textAlign:"center"}}><div style={{fontSize:10,color:P.ts,fontWeight:600}}>Доход</div><div style={{fontSize:16,fontWeight:800,color:P.green,fontFamily:"'Sora',sans-serif",marginTop:2}}>{fmt(tI)}</div></div>
+        <div style={{flex:1,background:P.redS,borderRadius:14,padding:"12px",textAlign:"center"}}><div style={{fontSize:10,color:P.ts,fontWeight:600}}>Расход</div><div style={{fontSize:16,fontWeight:800,color:P.red,fontFamily:"'Sora',sans-serif",marginTop:2}}>{fmt(tE)}</div></div>
       </div>
-      <Field label="Окрас"><input style={inp} value={form.color} onChange={e=>setForm({...form,color:e.target.value})}/></Field>
-      <Field label="Статус"><select style={inp} value={form.status} onChange={e=>setForm({...form,status:e.target.value})}><option>Активна</option><option>Племенная</option><option>Племенной</option><option>Стерилизована</option><option>Нужен допуск</option><option>На пенсии</option></select></Field>
-      <div style={{background:C.bg2,borderRadius:14,padding:14,marginBottom:12}}>
-        <div style={{fontSize:10,fontWeight:700,color:C.textSec,marginBottom:10,textTransform:"uppercase",letterSpacing:1}}>📄 Документы</div>
-        <Field label="Родословная (РКФ)"><input style={inp} value={form.pedigree_number} onChange={e=>setForm({...form,pedigree_number:e.target.value})}/></Field>
-        <Field label="Чип"><input style={inp} value={form.chip_number} onChange={e=>setForm({...form,chip_number:e.target.value})}/></Field>
-        <Field label="Клеймо"><input style={inp} value={form.tattoo_number} onChange={e=>setForm({...form,tattoo_number:e.target.value})}/></Field>
+    </>}
+  </div>);
+};
+
+/* ═══ PETS TAB ═══ */
+const PetsTab=({dogs,uid,setDogs,onDog})=>{
+  const[sh,sSh]=useState(false);
+  const[f,sF]=useState({name:"",breed:"",sex:"F",born:"",color:"",status:"Активна",breeding:false,pedigree_number:"",chip_number:"",tattoo_number:""});
+  const add=async()=>{try{const[s]=await db.ins("dogs",{user_id:uid,...f,born:f.born||null});setDogs(p=>[...p,s]);sSh(false);sF({name:"",breed:"",sex:"F",born:"",color:"",status:"Активна",breeding:false,pedigree_number:"",chip_number:"",tattoo_number:""});}catch(e){alert(e.message);}};
+  return(<div>
+    <div style={{fontSize:22,fontWeight:800,fontFamily:"'Sora',sans-serif",marginBottom:14}}>Питомцы</div>
+    {dogs.length===0&&<Empty icon="🐾" text="Добавьте первого питомца"/>}
+    {dogs.map(d=>(<Card key={d.id} onClick={()=>onDog(d)}><div style={{display:"flex",alignItems:"center",gap:12}}><div style={{width:44,height:44,borderRadius:"50%",background:d.sex==="F"?"linear-gradient(135deg,#E4DDFB,#C9B8F0)":"linear-gradient(135deg,#FBF3DC,#E8D9A0)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:800,color:d.sex==="F"?P.purple:P.gold,flexShrink:0}}>{d.sex==="F"?"♀":"♂"}</div><div style={{flex:1}}><div style={{fontWeight:700,fontSize:14}}>{d.name}</div><div style={{fontSize:12,color:P.ts}}>{d.breed||""}{d.color?" · "+d.color:""}</div></div><span style={{color:P.tt}}>›</span></div></Card>))}
+    <button id="addDogBtn" onClick={()=>sSh(true)} style={{...btn,marginTop:10}}>+ Добавить питомца</button>
+    <Modal open={sh} onClose={()=>sSh(false)} title="Новый питомец">
+      <F label="Кличка"><input style={inp} value={f.name} onChange={e=>sF({...f,name:e.target.value})}/></F>
+      <F label="Порода"><input style={inp} value={f.breed} onChange={e=>sF({...f,breed:e.target.value})} placeholder="Кавалер, Корги, Лабрадор..."/></F>
+      <div style={{display:"flex",gap:8}}><div style={{flex:1}}><F label="Пол"><select style={inp} value={f.sex} onChange={e=>sF({...f,sex:e.target.value})}><option value="F">♀ Сука</option><option value="M">♂ Кобель</option></select></F></div><div style={{flex:1}}><F label="Дата рождения"><input type="date" style={inp} value={f.born} onChange={e=>sF({...f,born:e.target.value})}/></F></div></div>
+      <F label="Окрас"><input style={inp} value={f.color} onChange={e=>sF({...f,color:e.target.value})}/></F>
+      <F label="Статус"><select style={inp} value={f.status} onChange={e=>sF({...f,status:e.target.value})}><option>Активна</option><option>Племенная</option><option>Племенной</option><option>Стерилизована</option><option>Нужен допуск</option></select></F>
+      <div style={{background:P.bg2,borderRadius:14,padding:12,marginBottom:12}}>
+        <div style={{fontSize:10,fontWeight:700,color:P.ts,marginBottom:8,textTransform:"uppercase",letterSpacing:1}}>📄 Документы</div>
+        <F label="Родословная РКФ"><input style={inp} value={f.pedigree_number} onChange={e=>sF({...f,pedigree_number:e.target.value})}/></F>
+        <F label="Чип"><input style={inp} value={f.chip_number} onChange={e=>sF({...f,chip_number:e.target.value})}/></F>
+        <F label="Клеймо"><input style={inp} value={f.tattoo_number} onChange={e=>sF({...f,tattoo_number:e.target.value})}/></F>
       </div>
-      <button onClick={addDog} style={btnP}>Сохранить</button>
+      <button onClick={add} style={btn}>Сохранить</button>
     </Modal>
   </div>);
 };
 
-/* ═══════════ FINANCE ═══════════ */
-const Finance=({userId,income,expenses,setIncome,setExpenses,dogs})=>{
-  const[tab,setTab]=useState("income");const[showAdd,setShowAdd]=useState(false);
-  const[form,setForm]=useState({date:"",category:"",amount:"",note:""});
-  const incC=["Вязка","Щенки","Контент","Менторство","Передержка","Другое"];
-  const expC=["Кормление","Ветеринария","Выставки","Груминг","Помещение","Разведение","Хранение","Другое"];
-  const cats=tab==="income"?incC:expC;const data=tab==="income"?income:expenses;
-  const total=data.reduce((s,d)=>s+d.amount,0);
-  const byCat={};data.forEach(d=>{byCat[d.category]=(byCat[d.category]||0)+d.amount;});
-  const add=async()=>{const tbl=tab==="income"?"income":"expenses";try{const[s]=await sb.ins(tbl,{user_id:userId,date:form.date,category:form.category,amount:parseInt(form.amount)||0,note:form.note});if(tab==="income")setIncome(p=>[s,...p]);else setExpenses(p=>[s,...p]);setShowAdd(false);setForm({date:"",category:"",amount:"",note:""});}catch(e){alert(e.message);}};
+/* ═══ FINANCE TAB ═══ */
+const FinTab=({uid,income,expenses,setIncome,setExpenses})=>{
+  const[tab,setTab]=useState("income");const[sh,sSh]=useState(false);
+  const[f,sF]=useState({date:"",category:"",amount:"",note:""});
+  const iC=["Вязка","Щенки","Контент","Менторство","Передержка","Другое"],eC=["Кормление","Ветеринария","Выставки","Груминг","Помещение","Разведение","Хранение","Другое"];
+  const cats=tab==="income"?iC:eC,data=tab==="income"?income:expenses,total=data.reduce((s,d)=>s+d.amount,0);
+  const add=async()=>{const t=tab==="income"?"income":"expenses";try{const[s]=await db.ins(t,{user_id:uid,date:f.date,category:f.category,amount:parseInt(f.amount)||0,note:f.note});if(tab==="income")setIncome(p=>[s,...p]);else setExpenses(p=>[s,...p]);sSh(false);sF({date:"",category:"",amount:"",note:""});}catch(e){alert(e.message);}};
   return(<div>
     <div style={{fontSize:22,fontWeight:800,fontFamily:"'Sora',sans-serif",marginBottom:14}}>Финансы</div>
-    <div style={{display:"flex",gap:6,marginBottom:14}}>
-      {["income","expenses"].map(t=>(<button key={t} onClick={()=>setTab(t)} style={{flex:1,padding:11,borderRadius:14,border:"none",fontFamily:"inherit",fontSize:13,fontWeight:700,cursor:"pointer",background:tab===t?C.purpleDeep:C.surface,color:tab===t?"#fff":C.text}}>{t==="income"?"💰 Доходы":"📉 Расходы"}</button>))}
+    <div style={{display:"flex",gap:6,marginBottom:14}}>{["income","expenses"].map(t=>(<button key={t} onClick={()=>setTab(t)} style={{flex:1,padding:11,borderRadius:14,border:"none",fontFamily:"inherit",fontSize:13,fontWeight:700,cursor:"pointer",background:tab===t?"linear-gradient(135deg,"+P.grad2+","+P.grad3+")":P.surface,color:tab===t?"#fff":P.text}}>{t==="income"?"💰 Доходы":"📉 Расходы"}</button>))}</div>
+    <div style={{background:tab==="income"?"linear-gradient(135deg,"+P.green+",#6AD89C)":"linear-gradient(135deg,"+P.red+",#F5A0A0)",borderRadius:18,padding:18,textAlign:"center",marginBottom:14}}>
+      <div style={{fontSize:11,color:"rgba(255,255,255,0.6)",fontWeight:600}}>Итого</div>
+      <div style={{fontSize:26,fontWeight:800,color:"#fff",fontFamily:"'Sora',sans-serif",marginTop:2}}>{fmt(total)}</div>
     </div>
-    <div style={{background:tab==="income"?"linear-gradient(135deg,"+C.green+",#6AD89C)":"linear-gradient(135deg,"+C.red+",#F5A0A0)",borderRadius:18,padding:20,textAlign:"center",marginBottom:16}}>
-      <div style={{fontSize:11,color:"rgba(255,255,255,0.65)",fontWeight:600}}>Итого</div>
-      <div style={{fontSize:28,fontWeight:800,color:"#fff",fontFamily:"'Sora',sans-serif",marginTop:2}}>{fmtRub(total)}</div>
-    </div>
-    {Object.keys(byCat).length>0&&<Card>{Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([c,a])=>(<div key={c} style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><span style={{fontSize:12,fontWeight:600,minWidth:80}}>{c}</span><ProgressBar value={a} max={total} color={tab==="income"?C.green:C.red}/><span style={{fontSize:11,fontWeight:700,color:C.textSec,minWidth:65,textAlign:"right"}}>{fmtRub(a)}</span></div>))}</Card>}
-    <Heading action="+ Добавить" onAction={()=>setShowAdd(true)}>Записи</Heading>
+    <Heading action="+ Добавить" onAction={()=>sSh(true)}>Записи</Heading>
     {data.length===0&&<Empty icon="📊" text="Записей пока нет"/>}
-    {data.sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(d=>(<Card key={d.id} accent={tab==="income"?C.green:C.red}><div style={{display:"flex",justifyContent:"space-between"}}><div><div style={{fontWeight:700,fontSize:13}}>{d.category}</div><div style={{fontSize:11,color:C.textTer,marginTop:2}}>{d.date}</div>{d.note&&<div style={{fontSize:12,color:C.textSec,marginTop:3}}>{d.note}</div>}</div><span style={{fontWeight:800,fontSize:14,color:tab==="income"?C.green:C.red,fontFamily:"'Sora',sans-serif"}}>{fmtRub(d.amount)}</span></div></Card>))}
-    <Modal open={showAdd} onClose={()=>setShowAdd(false)} title={tab==="income"?"Новый доход":"Новый расход"}>
-      <Field label="Дата"><input type="date" style={inp} value={form.date} onChange={e=>setForm({...form,date:e.target.value})}/></Field>
-      <Field label="Категория"><select style={inp} value={form.category} onChange={e=>setForm({...form,category:e.target.value})}><option value="">Выберите...</option>{cats.map(c=><option key={c}>{c}</option>)}</select></Field>
-      <Field label="Сумма (₽)"><input type="number" style={inp} value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})}/></Field>
-      <Field label="Примечание"><input style={inp} value={form.note} onChange={e=>setForm({...form,note:e.target.value})}/></Field>
-      <button onClick={add} style={btnP}>Сохранить</button>
+    {data.sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(d=>(<Card key={d.id} accent={tab==="income"?P.green:P.red}><div style={{display:"flex",justifyContent:"space-between"}}><div><div style={{fontWeight:700,fontSize:13}}>{d.category}</div><div style={{fontSize:11,color:P.tt,marginTop:2}}>{d.date}</div>{d.note&&<div style={{fontSize:12,color:P.ts,marginTop:3}}>{d.note}</div>}</div><span style={{fontWeight:800,fontSize:14,color:tab==="income"?P.green:P.red,fontFamily:"'Sora',sans-serif"}}>{fmt(d.amount)}</span></div></Card>))}
+    <Modal open={sh} onClose={()=>sSh(false)} title={tab==="income"?"Новый доход":"Новый расход"}>
+      <F label="Дата"><input type="date" style={inp} value={f.date} onChange={e=>sF({...f,date:e.target.value})}/></F>
+      <F label="Категория"><select style={inp} value={f.category} onChange={e=>sF({...f,category:e.target.value})}><option value="">Выберите...</option>{cats.map(c=><option key={c}>{c}</option>)}</select></F>
+      <F label="Сумма (₽)"><input type="number" style={inp} value={f.amount} onChange={e=>sF({...f,amount:e.target.value})}/></F>
+      <F label="Примечание"><input style={inp} value={f.note} onChange={e=>sF({...f,note:e.target.value})}/></F>
+      <button onClick={add} style={btn}>Сохранить</button>
     </Modal>
   </div>);
 };
 
-/* ═══════════ BOARDING ═══════════ */
-const Boarding=({userId,boarding,setBoarding})=>{
-  const[showAdd,setShowAdd]=useState(false);const[filter,setFilter]=useState("all");const[detail,setDetail]=useState(null);
-  const[form,setForm]=useState({dog_name:"",breed:"",owner_name:"",owner_phone:"",owner_telegram:"",date_in:"",date_out:"",daily_rate:"",prepaid:"0",notes:""});
-  const filtered=filter==="all"?boarding:boarding.filter(b=>b.status===filter);
-  const getDays=(a,b)=>Math.max(Math.ceil((new Date(b)-new Date(a))/864e5),0);
-  const stM={active:{l:"Сейчас",c:C.green,bg:C.greenSoft},upcoming:{l:"Ожидает",c:C.blue,bg:C.blueSoft},completed:{l:"Готово",c:C.textTer,bg:C.purplePale}};
-  const add=async()=>{try{const[s]=await sb.ins("boarding",{user_id:userId,...form,daily_rate:parseInt(form.daily_rate)||0,prepaid:parseInt(form.prepaid)||0,status:"upcoming"});setBoarding(p=>[s,...p]);setShowAdd(false);setForm({dog_name:"",breed:"",owner_name:"",owner_phone:"",owner_telegram:"",date_in:"",date_out:"",daily_rate:"",prepaid:"0",notes:""});}catch(e){alert(e.message);}};
-  const updSt=async(id,st)=>{try{await sb.upd("boarding",id,{status:st});setBoarding(p=>p.map(b=>b.id===id?{...b,status:st}:b));setDetail(null);}catch(e){alert(e.message);}};
-  return(<div>
-    <div style={{fontSize:22,fontWeight:800,fontFamily:"'Sora',sans-serif",marginBottom:14}}>Передержка</div>
-    <ChipFilter options={[{id:"all",label:"Все"},{id:"active",label:"🟢 Сейчас"},{id:"upcoming",label:"🔵 Ожидают"},{id:"completed",label:"Готово"}]} active={filter} onChange={setFilter}/>
-    <Heading action="+ Запись" onAction={()=>setShowAdd(true)}>Записи</Heading>
-    {filtered.length===0&&<Empty icon="🏠" text="Нет записей"/>}
-    {filtered.sort((a,b)=>{const o={active:0,upcoming:1,completed:2};return(o[a.status]||9)-(o[b.status]||9);}).map(b=>{
-      const st=stM[b.status]||stM.upcoming,days=getDays(b.date_in,b.date_out),total=days*b.daily_rate;
-      return(<Card key={b.id} onClick={()=>setDetail(b)} accent={st.c}>
-        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontWeight:700,fontSize:14}}>🐕 {b.dog_name}</span><Badge color={st.c} bg={st.bg}>{st.l}</Badge></div>
-        <div style={{fontSize:12,color:C.textTer,marginBottom:6}}>{b.breed} · {b.owner_name}</div>
-        <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:12,color:C.textSec}}>{days} дн.</span><span style={{fontWeight:800,fontSize:14,color:C.green,fontFamily:"'Sora',sans-serif"}}>{fmtRub(total)}</span></div>
-      </Card>);})}
-    <Modal open={!!detail} onClose={()=>setDetail(null)} title={detail?"🐕 "+detail.dog_name:""}>
-      {detail&&(()=>{const b=detail,days=getDays(b.date_in,b.date_out),total=days*b.daily_rate,debt=total-b.prepaid;return(<div>
-        <Card><div style={{fontSize:13,fontWeight:700,marginBottom:6}}>👤 {b.owner_name}</div>{b.owner_phone&&<a href={"tel:"+b.owner_phone} style={{fontSize:13,color:C.blue,textDecoration:"none",display:"block"}}>📞 {b.owner_phone}</a>}{b.owner_telegram&&<div style={{fontSize:13,color:C.blue,marginTop:2}}>✈️ {b.owner_telegram}</div>}</Card>
-        <Card><div style={{fontSize:13}}>Итого: <b style={{color:C.green}}>{fmtRub(total)}</b> · Предоплата: {fmtRub(b.prepaid)}{debt>0&&<span style={{color:C.red,fontWeight:700}}> · Долг: {fmtRub(debt)}</span>}</div></Card>
-        {b.notes&&<Card accent={C.orange}><div style={{fontSize:13}}>📝 {b.notes}</div></Card>}
-        {b.status==="upcoming"&&<button onClick={()=>updSt(b.id,"active")} style={{...btnP,background:C.green,marginTop:8}}>Принять</button>}
-        {b.status==="active"&&<button onClick={()=>updSt(b.id,"completed")} style={{...btnP,marginTop:8}}>Завершить</button>}
-      </div>);})()}
-    </Modal>
-    <Modal open={showAdd} onClose={()=>setShowAdd(false)} title="Новая передержка">
-      <Field label="Кличка"><input style={inp} value={form.dog_name} onChange={e=>setForm({...form,dog_name:e.target.value})}/></Field>
-      <Field label="Порода"><input style={inp} value={form.breed} onChange={e=>setForm({...form,breed:e.target.value})}/></Field>
-      <div style={{background:C.bg2,borderRadius:14,padding:14,marginBottom:12}}>
-        <div style={{fontSize:10,fontWeight:700,color:C.textSec,marginBottom:8,textTransform:"uppercase"}}>👤 Владелец</div>
-        <Field label="ФИО"><input style={inp} value={form.owner_name} onChange={e=>setForm({...form,owner_name:e.target.value})}/></Field>
-        <Field label="Телефон"><input type="tel" style={inp} value={form.owner_phone} onChange={e=>setForm({...form,owner_phone:e.target.value})}/></Field>
-        <Field label="Telegram"><input style={inp} value={form.owner_telegram} onChange={e=>setForm({...form,owner_telegram:e.target.value})}/></Field>
-      </div>
-      <div style={{display:"flex",gap:8}}><div style={{flex:1}}><Field label="Заезд"><input type="date" style={inp} value={form.date_in} onChange={e=>setForm({...form,date_in:e.target.value})}/></Field></div><div style={{flex:1}}><Field label="Выезд"><input type="date" style={inp} value={form.date_out} onChange={e=>setForm({...form,date_out:e.target.value})}/></Field></div></div>
-      <div style={{display:"flex",gap:8}}><div style={{flex:1}}><Field label="₽/день"><input type="number" style={inp} value={form.daily_rate} onChange={e=>setForm({...form,daily_rate:e.target.value})}/></Field></div><div style={{flex:1}}><Field label="Предоплата"><input type="number" style={inp} value={form.prepaid} onChange={e=>setForm({...form,prepaid:e.target.value})}/></Field></div></div>
-      <Field label="Особенности"><textarea style={{...inp,minHeight:70,resize:"vertical"}} value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})}/></Field>
-      <button onClick={add} style={btnP}>Сохранить</button>
-    </Modal>
-  </div>);
-};
+/* ═══ PROFILE TAB ═══ */
+const ProfileTab=({user,logout})=>(<div>
+  <div style={{fontSize:22,fontWeight:800,fontFamily:"'Sora',sans-serif",marginBottom:14}}>Профиль</div>
+  <Card><div style={{textAlign:"center",padding:"10px 0"}}>
+    <div style={{width:60,height:60,borderRadius:"50%",background:"linear-gradient(135deg,"+P.grad1+","+P.grad2+")",margin:"0 auto 10px",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>🐾</div>
+    <div style={{fontWeight:700,fontSize:16}}>{user.user_metadata?.full_name||"Пользователь"}</div>
+    <div style={{fontSize:13,color:P.ts,marginTop:2}}>{user.email}</div>
+  </div></Card>
+  <button onClick={logout} style={{...btn,background:P.red,marginTop:12}}>Выйти из аккаунта</button>
+</div>);
 
-/* ═══════════ LITTERS ═══════════ */
-const Litters=({userId,litters,setLitters})=>{
-  const[showAdd,setShowAdd]=useState(false);
-  const[form,setForm]=useState({father_name:"",mating_date:"",birth_date:"",puppies_count:""});
-  const add=async()=>{try{const[s]=await sb.ins("litters",{user_id:userId,father_name:form.father_name,mating_date:form.mating_date||null,birth_date:form.birth_date||null,puppies_count:parseInt(form.puppies_count)||0});setLitters(p=>[...p,s]);setShowAdd(false);setForm({father_name:"",mating_date:"",birth_date:"",puppies_count:""});}catch(e){alert(e.message);}};
-  return(<div>
-    <div style={{fontSize:22,fontWeight:800,fontFamily:"'Sora',sans-serif",marginBottom:14}}>Помёты</div>
-    <Heading action="+ Помёт" onAction={()=>setShowAdd(true)}>Все помёты</Heading>
-    {litters.length===0&&<Empty icon="🐾" text="Помётов пока нет"/>}
-    {litters.map(l=>(<Card key={l.id}><div style={{fontWeight:700,fontSize:15,fontFamily:"'Sora',sans-serif"}}>♂ {l.father_name||"—"}</div><div style={{fontSize:12,color:C.textTer,marginTop:4}}>{l.mating_date?"Вязка: "+l.mating_date:""}{l.birth_date?" · Рождение: "+l.birth_date:""}</div>
-      <div style={{display:"flex",gap:8,marginTop:10}}><div style={{flex:1,background:C.purplePale,borderRadius:12,padding:"8px",textAlign:"center"}}><div style={{fontSize:18,fontWeight:800,color:C.purpleDeep}}>{l.puppies_count||0}</div><div style={{fontSize:9,color:C.textTer}}>щенков</div></div><div style={{flex:1,background:C.greenSoft,borderRadius:12,padding:"8px",textAlign:"center"}}><div style={{fontSize:18,fontWeight:800,color:C.green}}>{l.sold||0}</div><div style={{fontSize:9,color:C.textTer}}>продано</div></div></div>
-    </Card>))}
-    <Modal open={showAdd} onClose={()=>setShowAdd(false)} title="Новый помёт">
-      <Field label="Отец"><input style={inp} value={form.father_name} onChange={e=>setForm({...form,father_name:e.target.value})}/></Field>
-      <Field label="Дата вязки"><input type="date" style={inp} value={form.mating_date} onChange={e=>setForm({...form,mating_date:e.target.value})}/></Field>
-      <Field label="Дата рождения"><input type="date" style={inp} value={form.birth_date} onChange={e=>setForm({...form,birth_date:e.target.value})}/></Field>
-      <Field label="Щенков"><input type="number" style={inp} value={form.puppies_count} onChange={e=>setForm({...form,puppies_count:e.target.value})}/></Field>
-      <button onClick={add} style={btnP}>Сохранить</button>
-    </Modal>
-  </div>);
-};
-
-/* ═══════════ SIDEBAR NAV ═══════════ */
-const NAV=[{id:"overview",icon:"📊",label:"Обзор"},{id:"finance",icon:"💰",label:"Финансы"},{id:"litters",icon:"🐾",label:"Помёты"},{id:"boarding",icon:"🏠",label:"Передержка"}];
-
-/* ═══════════ MAIN APP ═══════════ */
+/* ═══ MAIN ═══ */
 function App(){
-  const[user,setUser]=useState(null);const[loading,setLoading]=useState(true);
-  const[page,setPage]=useState("overview");const[selectedDog,setSelectedDog]=useState(null);
-  const[sideOpen,setSideOpen]=useState(false);
+  const[user,setUser]=useState(null);const[ld,sLd]=useState(true);
+  const[tab,setTab]=useState("home");const[selDog,setSelDog]=useState(null);
   const[dogs,setDogs]=useState([]);const[income,setIncome]=useState([]);const[expenses,setExpenses]=useState([]);
   const[health,setHealth]=useState([]);const[shows,setShows]=useState([]);const[litters,setLitters]=useState([]);
   const[groom,setGroom]=useState([]);const[boarding,setBoarding]=useState([]);
+  const[showQuickAdd,setShowQuickAdd]=useState(false);
 
-  useEffect(()=>{try{const t=sessionStorage.getItem("fu_token");if(t){sb.token=t;sb.getUser().then(u=>{if(u?.id)setUser(u);else sb.token=null;setLoading(false);}).catch(()=>setLoading(false));}else setLoading(false);}catch(e){setLoading(false);}},[]);
-  useEffect(()=>{if(!user)return;Promise.all([sb.sel("dogs","order=name.asc"),sb.sel("income","order=date.desc"),sb.sel("expenses","order=date.desc"),sb.sel("health_records","order=date.desc"),sb.sel("shows","order=date.desc"),sb.sel("litters","order=created_at.desc"),sb.sel("grooming","order=date.desc"),sb.sel("boarding","order=date_in.desc")]).then(([d,i,e,h,s,l,g,b])=>{setDogs(d);setIncome(i);setExpenses(e);setHealth(h);setShows(s);setLitters(l);setGroom(g);setBoarding(b);}).catch(console.error);},[user]);
-  const onAuth=u=>{setUser(u);try{sessionStorage.setItem("fu_token",sb.token);}catch(e){}};
-  const logout=()=>{sb.signOut();try{sessionStorage.removeItem("fu_token");}catch(e){}setUser(null);};
+  useEffect(()=>{try{const t=sessionStorage.getItem("fo_tk");if(t){db.tk=t;db.me().then(u=>{if(u?.id)setUser(u);else db.tk=null;sLd(false);}).catch(()=>sLd(false));}else sLd(false);}catch(e){sLd(false);}},[]);
+  useEffect(()=>{if(!user)return;Promise.all([db.sel("dogs","order=name.asc"),db.sel("income","order=date.desc"),db.sel("expenses","order=date.desc"),db.sel("health_records","order=date.desc"),db.sel("shows","order=date.desc"),db.sel("litters","order=created_at.desc"),db.sel("grooming","order=date.desc"),db.sel("boarding","order=date_in.desc")]).then(([d,i,e,h,s,l,g,b])=>{setDogs(d);setIncome(i);setExpenses(e);setHealth(h);setShows(s);setLitters(l);setGroom(g);setBoarding(b);}).catch(console.error);},[user]);
+  const onAuth=u=>{setUser(u);try{sessionStorage.setItem("fo_tk",db.tk);}catch(e){}};
+  const logout=()=>{db.out();try{sessionStorage.removeItem("fo_tk");}catch(e){}setUser(null);};
 
-  if(loading)return<div style={{background:C.bg,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center"}}><Spinner/></div>;
-  if(!user)return<AuthScreen onAuth={onAuth}/>;
+  if(ld)return<div style={{background:P.bg,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center"}}><Spin/></div>;
+  if(!user)return<Auth onAuth={onAuth}/>;
 
   const uid=user.id;
-  const onDogClick=d=>{setSelectedDog(d);setPage("dogProfile");};
-  const onDogBack=()=>{setSelectedDog(null);setPage("overview");};
+  const onDog=d=>{setSelDog(d);setTab("dogProfile");};
+  const onDogBack=()=>{setSelDog(null);setTab("home");};
 
-  const renderPage=()=>{
-    if(page==="dogProfile"&&selectedDog)return<DogProfile dog={selectedDog} userId={uid} health={health} shows={shows} groom={groom} setHealth={setHealth} setShows={setShows} setGroom={setGroom} onBack={onDogBack}/>;
-    switch(page){
-      case"overview":return<Overview dogs={dogs} income={income} expenses={expenses} health={health} onDogClick={onDogClick} userId={uid} setDogs={setDogs}/>;
-      case"finance":return<Finance userId={uid} income={income} expenses={expenses} setIncome={setIncome} setExpenses={setExpenses} dogs={dogs}/>;
-      case"litters":return<Litters userId={uid} litters={litters} setLitters={setLitters}/>;
-      case"boarding":return<Boarding userId={uid} boarding={boarding} setBoarding={setBoarding}/>;
+  const page=()=>{
+    if(tab==="dogProfile"&&selDog)return<DogProfile dog={selDog} uid={uid} health={health} shows={shows} groom={groom} setHealth={setHealth} setShows={setShows} setGroom={setGroom} onBack={onDogBack}/>;
+    switch(tab){
+      case"home":return<HomeTab dogs={dogs} health={health} income={income} expenses={expenses} onDog={onDog} uid={uid} setDogs={setDogs}/>;
+      case"pets":return<PetsTab dogs={dogs} uid={uid} setDogs={setDogs} onDog={onDog}/>;
+      case"finance":return<FinTab uid={uid} income={income} expenses={expenses} setIncome={setIncome} setExpenses={setExpenses}/>;
+      case"profile":return<ProfileTab user={user} logout={logout}/>;
     }
   };
 
+  const NAV=[{id:"home",icon:"🏠",label:"Главная"},{id:"pets",icon:"🐾",label:"Питомцы"},{id:"add",icon:"+",label:""},{id:"finance",icon:"📊",label:"Финансы"},{id:"profile",icon:"👤",label:"Профиль"}];
+
   return(
-    <div style={{background:C.bg,minHeight:"100vh",maxWidth:480,margin:"0 auto",position:"relative"}}>
-      {/* Decorative */}
-      <div style={{position:"fixed",top:-50,right:-40,width:180,height:180,borderRadius:"50%",background:C.purpleSoft,opacity:0.35,filter:"blur(50px)",pointerEvents:"none",zIndex:0}}/>
+    <div style={{background:P.bg,minHeight:"100vh",maxWidth:480,margin:"0 auto",position:"relative"}}>
+      <div style={{padding:"4px 18px 100px"}}>{page()}</div>
 
-      {/* Header */}
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"18px 20px 12px",position:"relative",zIndex:2}}>
-        <button onClick={()=>setSideOpen(!sideOpen)} style={{width:40,height:40,borderRadius:12,background:C.surface,border:"none",cursor:"pointer",boxShadow:C.shadow,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>☰</button>
-        <div style={{fontSize:20,fontWeight:800,color:C.purpleDeep,fontFamily:"'Sora',sans-serif",letterSpacing:-0.5}}>furura</div>
-        <button onClick={logout} style={{width:40,height:40,borderRadius:12,background:C.surface,border:"none",cursor:"pointer",boxShadow:C.shadow,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}} title="Выйти">🚪</button>
+      {/* Bottom Tab Bar */}
+      <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,background:P.surface,borderTop:"1px solid "+P.border,display:"flex",justifyContent:"space-around",alignItems:"center",padding:"6px 8px",paddingBottom:"max(6px, env(safe-area-inset-bottom))",zIndex:100,boxShadow:"0 -4px 20px rgba(30,20,51,0.06)"}}>
+        {NAV.map(n=>{
+          if(n.id==="add")return(
+            <button key="add" onClick={()=>setShowQuickAdd(true)} style={{width:52,height:52,borderRadius:"50%",background:"linear-gradient(135deg,"+P.grad1+","+P.grad2+","+P.grad3+")",border:"none",color:"#fff",fontSize:26,fontWeight:300,cursor:"pointer",boxShadow:"0 4px 16px rgba(123,94,167,0.35)",marginTop:-18,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+          );
+          const active=tab===n.id||(n.id==="home"&&tab==="dogProfile");
+          return(<button key={n.id} onClick={()=>{setTab(n.id);setSelDog(null);}} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"4px 10px",border:"none",background:"none",cursor:"pointer",fontFamily:"inherit"}}>
+            <span style={{fontSize:20,opacity:active?1:0.4}}>{n.icon}</span>
+            <span style={{fontSize:9,color:active?P.purpleDeep:P.tt,fontWeight:active?700:500}}>{n.label}</span>
+          </button>);
+        })}
       </div>
 
-      {/* Sidebar overlay */}
-      {sideOpen&&<div onClick={()=>setSideOpen(false)} style={{position:"fixed",inset:0,background:"rgba(30,20,51,0.3)",zIndex:50,backdropFilter:"blur(4px)"}}/>}
-
-      {/* Sidebar */}
-      <div style={{position:"fixed",left:sideOpen?0:-260,top:0,bottom:0,width:250,background:C.surface,zIndex:60,boxShadow:sideOpen?C.shadowLg:"none",transition:"left 0.25s ease",padding:"60px 16px 20px",display:"flex",flexDirection:"column"}}>
-        <div style={{fontSize:22,fontWeight:800,color:C.purpleDeep,fontFamily:"'Sora',sans-serif",marginBottom:24,paddingLeft:4}}>furura</div>
-        {NAV.map(n=>(<button key={n.id} onClick={()=>{setPage(n.id==="overview"?"overview":n.id);setSideOpen(false);setSelectedDog(null);}} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 12px",borderRadius:14,border:"none",background:page===n.id||(n.id==="overview"&&page==="dogProfile")?C.purplePale:"transparent",color:page===n.id||(n.id==="overview"&&page==="dogProfile")?C.purpleDeep:C.textSec,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit",marginBottom:4,width:"100%",textAlign:"left"}}>
-          <span style={{fontSize:18}}>{n.icon}</span>{n.label}
+      {/* Quick Add Modal */}
+      <Modal open={showQuickAdd} onClose={()=>setShowQuickAdd(false)} title="Быстрое добавление">
+        {[{icon:"🐾",label:"Новый питомец",action:()=>{setShowQuickAdd(false);setTab("pets");setTimeout(()=>document.getElementById("addDogBtn")?.click(),100);}},
+          {icon:"🏥",label:"Запись о здоровье",action:()=>{setShowQuickAdd(false);if(dogs.length>0){setSelDog(dogs[0]);setTab("dogProfile");}else alert("Сначала добавьте питомца");}},
+          {icon:"💰",label:"Доход / Расход",action:()=>{setShowQuickAdd(false);setTab("finance");}},
+        ].map((a,i)=>(<button key={i} onClick={a.action} style={{display:"flex",alignItems:"center",gap:12,width:"100%",padding:"14px 16px",borderRadius:14,border:"none",background:P.surface,marginBottom:8,cursor:"pointer",fontFamily:"inherit",boxShadow:P.sh,fontSize:14,fontWeight:600,color:P.text,textAlign:"left"}}>
+          <span style={{fontSize:22}}>{a.icon}</span>{a.label}
         </button>))}
-        <div style={{flex:1}}/>
-        <div style={{fontSize:11,color:C.textTer,padding:"8px 12px"}}>{user.email}</div>
-      </div>
-
-      {/* Content */}
-      <div style={{padding:"4px 18px 40px",position:"relative",zIndex:1}}>{renderPage()}</div>
+      </Modal>
     </div>
   );
 }
